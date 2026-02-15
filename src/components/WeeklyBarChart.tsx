@@ -1,6 +1,8 @@
 import { useMemo } from "react";
+import { Bar, BarChart, XAxis, YAxis, Rectangle, CartesianGrid } from "recharts";
 import { getTodayDate } from "@/db/utils";
 import type { WeeklyStats } from "@/types";
+import { ChartContainer } from "@/components/ui/chart";
 
 interface WeeklyBarChartProps {
   data: WeeklyStats[];
@@ -8,65 +10,124 @@ interface WeeklyBarChartProps {
   onDateSelect: (date: string) => void;
 }
 
-export function WeeklyBarChart({ data, selectedDate, onDateSelect }: WeeklyBarChartProps) {
-  const maxTime = useMemo(() => {
-    const max = Math.max(...data.map((d) => d.totalTime), 1);
-    // Round up to next even hour for nice scale
-    const maxHours = Math.ceil(max / 3600);
-    return Math.ceil(maxHours / 2) * 2 * 3600; // Round to nearest 2 hours
-  }, [data]);
+interface CustomBarProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  payload?: any;
+  onDateSelect: (date: string) => void;
+}
 
-  const maxHours = maxTime / 3600;
+const CustomBar = (props: CustomBarProps) => {
+  const { x, y, width, height, payload, onDateSelect } = props;
+
+  if (!payload) return null;
+
+  const fill = payload.isSelected
+    ? "#10b981" // accent color
+    : payload.isFuture
+      ? "#27272a" // zinc-800
+      : "#3f3f46"; // zinc-700
+
+  const opacity = payload.isFuture ? 0.5 : 1;
+  const cursor = payload.isFuture ? "not-allowed" : "pointer";
 
   return (
-    <div className="w-full">
-      {/* Chart */}
-      <div className="flex items-end justify-between gap-2 h-40 px-4">
-        {data.map((stat) => {
-          const heightPercentage = maxTime > 0 ? (stat.totalTime / maxTime) * 100 : 0;
-          const isSelected = stat.date === selectedDate;
+    <Rectangle
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={fill}
+      opacity={opacity}
+      radius={[4, 4, 0, 0]}
+      style={{ cursor }}
+      onClick={() => {
+        if (!payload.isFuture) {
+          onDateSelect(payload.date);
+        }
+      }}
+    />
+  );
+};
 
-          const isFutureDate = stat.date > getTodayDate();
+export function WeeklyBarChart({ data, selectedDate, onDateSelect }: WeeklyBarChartProps) {
+  const chartData = useMemo(() => {
+    return data.map((stat) => ({
+      day: stat.day,
+      date: stat.date,
+      time: stat.totalTime / 3600, // Convert to hours for display
+      isSelected: stat.date === selectedDate,
+      isFuture: stat.date > getTodayDate(),
+    }));
+  }, [data, selectedDate]);
 
-          return (
-            <button
-              key={stat.date}
-              onClick={() => !isFutureDate && onDateSelect(stat.date)}
-              disabled={isFutureDate}
-              className="flex-1 flex flex-col items-center gap-2 group disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {/* Bar */}
-              <div className="w-full flex items-end justify-center" style={{ height: "140px" }}>
-                <div
-                  className={`w-full rounded-t transition-all ${
-                    isSelected
-                      ? "bg-accent"
-                      : isFutureDate
-                        ? "bg-zinc-900"
-                        : "bg-zinc-800 group-hover:bg-zinc-700"
+  // Compute integer Y-axis ticks based on max recorded time
+  const { yTicks, yMax } = useMemo(() => {
+    const maxTime = Math.max(...chartData.map((d) => d.time), 0);
+    const maxCeil = Math.max(Math.ceil(maxTime), 1); // at least 1h
+    const ticks = Array.from({ length: maxCeil + 1 }, (_, i) => i);
+    return { yTicks: ticks, yMax: maxCeil };
+  }, [chartData]);
+
+  const chartConfig = {
+    time: {
+      label: "Time",
+      color: "hsl(142, 76%, 36%)", // emerald-600 (accent color)
+    },
+  };
+
+  return (
+    <div className="w-full h-[180px]">
+      <ChartContainer config={chartConfig} className="h-full w-full">
+        <BarChart data={chartData} margin={{ top: 20, right: 5, left: -5, bottom: 20 }}>
+          <CartesianGrid vertical={false} stroke="#374151" />
+          <XAxis
+            dataKey="day"
+            tickLine={false}
+            axisLine={false}
+            tick={({ x, y, payload }) => {
+              const item = chartData.find((d) => d.day === payload.value);
+              const isFuture = item?.isFuture ?? false;
+              const cursor = isFuture ? "not-allowed" : "pointer";
+
+              return (
+                <text
+                  x={x}
+                  y={y + 10}
+                  textAnchor="middle"
+                  className={`text-xs ${
+                    item?.isSelected ? "fill-accent font-semibold" : "fill-gray-400"
                   }`}
-                  style={{
-                    height: `${heightPercentage}%`,
-                    minHeight: heightPercentage > 0 ? "4px" : "0px",
+                  style={{ cursor }}
+                  onClick={() => {
+                    if (item && !isFuture) {
+                      onDateSelect(item.date);
+                    }
                   }}
-                />
-              </div>
+                >
+                  {payload.value}
+                </text>
+              );
+            }}
+          />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(value) => `${value}h`}
+            tick={{ className: "fill-gray-500 text-xs" }}
+            ticks={yTicks}
+            domain={[0, yMax]}
+            width={30}
+          />
 
-              {/* Label */}
-              <span
-                className={`text-xs ${isSelected ? "text-accent font-semibold" : "text-gray-400"}`}
-              >
-                {stat.day}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Y-axis labels */}
-      <div className="flex justify-end gap-2 text-xs text-gray-500 mt-2 px-4">
-        <span>Max: {maxHours}h</span>
-      </div>
+          <Bar
+            dataKey="time"
+            shape={(props: any) => <CustomBar {...props} onDateSelect={onDateSelect} />}
+          />
+        </BarChart>
+      </ChartContainer>
     </div>
   );
 }

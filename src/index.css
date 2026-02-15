@@ -27,3 +27,12 @@ body {
   width: 100%;
   min-height: 100vh;
 }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

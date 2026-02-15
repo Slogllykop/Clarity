@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback, useRef } from "react";
+import { Label, Pie, PieChart } from "recharts";
 import { formatTime } from "@/db/utils";
 import { getDomainDisplayName } from "@/lib/domain-utils";
 import type { WebsiteActivity } from "@/types";
+import { ChartContainer, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 
 interface CircularChartProps {
   websites: Array<WebsiteActivity & { percentage: number }>;
@@ -10,110 +12,176 @@ interface CircularChartProps {
 }
 
 export function CircularChart({ websites, totalTime, onClick }: CircularChartProps) {
-  const chartData = useMemo(() => {
-    let currentAngle = -90; // Start from top
+  const [showLabels, setShowLabels] = useState(false);
+  const [isAnimationActive, setIsAnimationActive] = useState(true);
+  const hasAnimated = useRef(false);
+  const animEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced handler — recharts fires onAnimationEnd per-sector, so we wait
+  // for the last sector to finish before updating state
+  const handleAnimationEnd = useCallback(() => {
+    if (hasAnimated.current) return;
+    if (animEndTimer.current) clearTimeout(animEndTimer.current);
+    animEndTimer.current = setTimeout(() => {
+      hasAnimated.current = true;
+      setIsAnimationActive(false);
+      setShowLabels(true);
+    }, 50);
+  }, []);
+
+  const { chartData, chartConfig } = useMemo(() => {
     const colors = [
-      "#10b981", // emerald
-      "#3b82f6", // blue
-      "#f59e0b", // amber
-      "#ef4444", // red
-      "#8b5cf6", // violet
-      "#ec4899", // pink
-      "#14b8a6", // teal
-      "#f97316", // orange
-      "#06b6d4", // cyan
-      "#a855f7", // purple
-      "#84cc16", // lime
-      "#6366f1", // indigo
-      "#eab308", // yellow
-      "#22c55e", // green
-      "#d946ef", // fuchsia
-      "#0ea5e9", // sky
-      "#f43f5e", // rose
-      "#facc15", // yellow-400
+      "hsl(142, 76%, 36%)", // emerald-600
+      "hsl(217, 91%, 60%)", // blue-500
+      "hsl(38, 92%, 50%)", // amber-500
+      "hsl(0, 84%, 60%)", // red-500
+      "hsl(258, 90%, 66%)", // violet-500
+      "hsl(330, 81%, 60%)", // pink-500
+      "hsl(173, 80%, 40%)", // teal-600
+      "hsl(24, 95%, 53%)", // orange-500
+      "hsl(188, 94%, 43%)", // cyan-600
+      "hsl(271, 91%, 65%)", // purple-500
+      "hsl(78, 92%, 45%)", // lime-600
+      "hsl(239, 84%, 67%)", // indigo-500
+      "hsl(45, 93%, 47%)", // yellow-500
+      "hsl(142, 71%, 45%)", // green-600
+      "hsl(292, 84%, 61%)", // fuchsia-500
+      "hsl(199, 89%, 48%)", // sky-600
+      "hsl(351, 95%, 71%)", // rose-400
+      "hsl(47, 96%, 53%)", // yellow-400
     ];
 
-    return websites.map((website, index) => {
-      const percentage = website.percentage;
-      const angle = (percentage / 100) * 360;
-      // Use grey color for "Others" category, otherwise use colors array
-      const color = website.domain === "Others" ? "#6b7280" : colors[index % colors.length];
+    const data =
+      websites.length > 0
+        ? websites.map((website, index) => ({
+            domain: website.domain,
+            time: website.timeSpent,
+            percentage: website.percentage,
+            fill: website.domain === "Others" ? "hsl(0, 0%, 42%)" : colors[index % colors.length],
+          }))
+        : [{ domain: "No Data", time: 1, percentage: 100, fill: "hsl(0, 0%, 20%)" }];
 
-      const segment = {
-        domain: website.domain,
-        percentage,
-        color,
-        startAngle: currentAngle,
-        endAngle: currentAngle + angle,
-      };
+    const config =
+      websites.length > 0
+        ? websites.reduce(
+            (acc, website, index) => {
+              acc[website.domain] = {
+                label: getDomainDisplayName(website.domain),
+                color:
+                  website.domain === "Others" ? "hsl(0, 0%, 42%)" : colors[index % colors.length],
+              };
+              return acc;
+            },
+            {} as Record<string, { label: string; color: string }>,
+          )
+        : { "No Data": { label: "No Data", color: "hsl(0, 0%, 20%)" } };
 
-      currentAngle += angle;
-      return segment;
-    });
+    return { chartData: data, chartConfig: config };
   }, [websites]);
 
-  const radius = 80;
-  const strokeWidth = 14; // Reduced from 20 to make it less fat
-  const normalizedRadius = radius - strokeWidth / 2;
+  // Memoize label renderer so it doesn't change reference on re-renders
+  const renderLabel = showLabels
+    ? ({ cx, cy, midAngle, outerRadius, time, percentage }: Record<string, number>) => {
+        // Skip labels for very small slices to prevent overlap
+        if (percentage < 5) return null;
+
+        const RADIAN = Math.PI / 180;
+        const sin = Math.sin(-midAngle * RADIAN);
+        const cos = Math.cos(-midAngle * RADIAN);
+
+        // Start point on the outer edge
+        const sx = cx + (outerRadius + 4) * cos;
+        const sy = cy + (outerRadius + 4) * sin;
+
+        // Mid point of the connector
+        const mx = cx + (outerRadius + 20) * cos;
+        const my = cy + (outerRadius + 20) * sin;
+
+        // End point - extends horizontally
+        const isRight = cos >= 0;
+        const ex = mx + (isRight ? 14 : -14);
+        const ey = my;
+
+        return (
+          <g style={{ animation: "fadeIn 100ms ease-in forwards" }}>
+            <path
+              d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
+              stroke="#888"
+              fill="none"
+              strokeWidth={1}
+            />
+            <text
+              x={ex + (isRight ? 5 : -5)}
+              y={ey}
+              fill="white"
+              textAnchor={isRight ? "start" : "end"}
+              dominantBaseline="central"
+              className="text-[12px]"
+            >
+              {formatTime(time, true)}
+            </text>
+          </g>
+        );
+      }
+    : false;
 
   return (
     <div
-      className="flex flex-col items-center gap-4 cursor-pointer hover:opacity-90 transition-opacity"
+      className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
       onClick={onClick}
     >
-      <div className="relative">
-        <svg height={radius * 2} width={radius * 2}>
-          {/* Background circle */}
-          <circle
-            stroke="#1f1f1f"
-            fill="transparent"
-            strokeWidth={strokeWidth}
-            r={normalizedRadius}
-            cx={radius}
-            cy={radius}
-          />
-
-          {/* Segments */}
-          {chartData.map((segment, index) => {
-            const startAngle = (segment.startAngle * Math.PI) / 180;
-            const endAngle = (segment.endAngle * Math.PI) / 180;
-            const largeArcFlag = segment.percentage > 50 ? 1 : 0;
-
-            const startX = radius + normalizedRadius * Math.cos(startAngle);
-            const startY = radius + normalizedRadius * Math.sin(startAngle);
-            const endX = radius + normalizedRadius * Math.cos(endAngle);
-            const endY = radius + normalizedRadius * Math.sin(endAngle);
-
-            return (
-              <path
-                key={index}
-                d={`M ${startX} ${startY} A ${normalizedRadius} ${normalizedRadius} 0 ${largeArcFlag} 1 ${endX} ${endY}`}
-                stroke={segment.color}
-                strokeWidth={strokeWidth}
-                fill="transparent"
-                strokeLinecap="round"
+      <div className="h-[320px] w-[340px]">
+        <ChartContainer config={chartConfig} className="h-full w-full">
+          <PieChart>
+            <Pie
+              data={chartData}
+              dataKey="time"
+              nameKey="domain"
+              innerRadius={80}
+              outerRadius={100}
+              strokeWidth={2}
+              stroke="#000000"
+              isAnimationActive={isAnimationActive}
+              onAnimationEnd={handleAnimationEnd}
+              label={renderLabel}
+              labelLine={false}
+            >
+              <Label
+                content={({ viewBox }) => {
+                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                    return (
+                      <text
+                        x={viewBox.cx}
+                        y={viewBox.cy}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                      >
+                        <tspan
+                          x={viewBox.cx}
+                          y={viewBox.cy}
+                          className="fill-white text-3xl font-bold"
+                        >
+                          {formatTime(totalTime, true)}
+                        </tspan>
+                        <tspan
+                          x={viewBox.cx}
+                          y={(viewBox.cy || 0) + 20}
+                          className="fill-gray-400 text-xs"
+                        >
+                          Today
+                        </tspan>
+                      </text>
+                    );
+                  }
+                }}
               />
-            );
-          })}
-        </svg>
-
-        {/* Center text */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-3xl font-bold text-white">{formatTime(totalTime, true)}</div>
-          <div className="text-xs text-gray-400">Today</div>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-2 justify-center max-w-[350px]">
-        {chartData.map((segment, index) => (
-          <div key={index} className="flex items-center gap-1 text-xs">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }} />
-            <span className="text-gray-300 truncate max-w-[80px]">
-              {getDomainDisplayName(segment.domain)}
-            </span>
-          </div>
-        ))}
+            </Pie>
+            <ChartLegend
+              content={<ChartLegendContent />}
+              wrapperStyle={{ paddingTop: 16, paddingLeft: 8, paddingRight: 8 }}
+            />
+          </PieChart>
+        </ChartContainer>
       </div>
     </div>
   );

@@ -33,20 +33,26 @@ export function formatTime(seconds: number, compact = false): string {
 }
 
 /**
- * Get today's date in YYYY-MM-DD format
+ * Get today's date in YYYY-MM-DD format (local timezone)
  */
 export function getTodayDate(): string {
   const now = new Date();
-  return now.toISOString().split("T")[0];
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
- * Get date string for a specific number of days ago
+ * Get date string for a specific number of days ago (local timezone)
  */
 export function getDateDaysAgo(daysAgo: number): string {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -64,9 +70,16 @@ export function getWeekRange(date: string): { start: string; end: string } {
   const saturday = new Date(sunday);
   saturday.setDate(sunday.getDate() + 6);
 
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   return {
-    start: sunday.toISOString().split("T")[0],
-    end: saturday.toISOString().split("T")[0],
+    start: formatLocalDate(sunday),
+    end: formatLocalDate(saturday),
   };
 }
 
@@ -206,11 +219,15 @@ export function generateWeeklyStatsArray(
   dailyActivities: Array<{ date: string; totalTime: number }>,
 ): WeeklyStats[] {
   const stats: WeeklyStats[] = [];
-  const current = new Date(weekRange.start);
-  const end = new Date(weekRange.end);
+  const current = new Date(weekRange.start + 'T00:00:00');
+  const end = new Date(weekRange.end + 'T00:00:00');
 
   while (current <= end) {
-    const dateStr = current.toISOString().split("T")[0];
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, '0');
+    const day = String(current.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
     const activity = dailyActivities.find((a) => a.date === dateStr);
 
     stats.push({

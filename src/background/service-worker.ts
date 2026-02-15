@@ -9,12 +9,14 @@ let currentSession: {
   startTime: number | null;
   faviconUrl: string | null;
   isNewVisit: boolean; // Track if this is a new visit to increment counter
+  sessionDate: string | null; // Track which date this session belongs to
 } = {
   tabId: null,
   domain: null,
   startTime: null,
   faviconUrl: null,
   isNewVisit: false,
+  sessionDate: null,
 };
 
 // Cache for timers to avoid frequent DB reads
@@ -40,6 +42,12 @@ async function initialize() {
 
   // Set up notification check alarm (every 30 seconds)
   chrome.alarms.create("checkNotifications", { periodInMinutes: 0.5 });
+
+  // Set up midnight reset alarm
+  chrome.alarms.create("midnightReset", {
+    when: getNextMidnight(),
+    periodInMinutes: 24 * 60, // Daily
+  });
 
   // Check for active tab on startup
   checkActiveTab();
@@ -139,10 +147,65 @@ async function saveCurrentSession() {
     return;
   }
 
+  const today = getTodayDate();
+  
+  // Check if the day has changed since the session started
+  if (currentSession.sessionDate && currentSession.sessionDate !== today) {
+    console.log(`Clarity: Day changed from ${currentSession.sessionDate} to ${today}, resetting session`);
+    
+    // Calculate midnight timestamp for the transition
+    const todayMidnight = new Date(today);
+    todayMidnight.setHours(0, 0, 0, 0);
+    const midnightTime = todayMidnight.getTime();
+    
+    // Save time accumulated up to midnight for the previous day
+    const timeUntilMidnight = Math.floor((midnightTime - currentSession.startTime) / 1000);
+    
+    if (timeUntilMidnight > 0) {
+      const domain = currentSession.domain;
+      try {
+        const existing = await db.getWebsiteActivity(currentSession.sessionDate, domain);
+        const activity: WebsiteActivity = {
+          date: currentSession.sessionDate,
+          domain,
+          faviconUrl: currentSession.faviconUrl || existing?.faviconUrl || null,
+          timeSpent: (existing?.timeSpent || 0) + timeUntilMidnight,
+          visitCount: (existing?.visitCount || 0) + (currentSession.isNewVisit ? 1 : 0),
+          lastVisit: midnightTime - 1, // Just before midnight
+        };
+        await db.saveWebsiteActivity(activity);
+        
+        // Update daily total for previous day
+        const dailyActivities = await db.getWebsiteActivitiesForDate(currentSession.sessionDate);
+        const totalTime = dailyActivities.reduce((sum, a) => sum + a.timeSpent, 0);
+        const websiteCount = dailyActivities.length;
+        await db.saveDailyActivity({
+          date: currentSession.sessionDate,
+          totalTime,
+          websiteCount,
+        });
+        
+        console.log(`Clarity: Saved ${timeUntilMidnight}s for ${domain} to previous day ${currentSession.sessionDate}`);
+      } catch (error) {
+        console.error("Clarity: Error saving previous day session", error);
+      }
+    }
+    
+    // Reset session for the new day - start from midnight
+    currentSession.startTime = midnightTime;
+    currentSession.sessionDate = today;
+    currentSession.isNewVisit = true; // New visit for the new day
+    
+    // Reset notification tracker for new day
+    await resetNotificationTracker();
+    
+    // Update blocking rules (timers reset daily)
+    await updateBlockingRules();
+  }
+
   const timeSpent = Math.floor((Date.now() - currentSession.startTime) / 1000);
   if (timeSpent < 1) return; // Don't save sessions less than 1 second
 
-  const today = getTodayDate();
   const domain = currentSession.domain;
 
   try {
@@ -317,6 +380,7 @@ async function startTracking(tabId: number, url: string, faviconUrl?: string) {
     startTime: Date.now(),
     faviconUrl: faviconUrl || null,
     isNewVisit: true, // Mark as new visit
+    sessionDate: getTodayDate(), // Track which date this session belongs to
   };
 
   console.log(`Clarity: Started tracking ${domain}`);
@@ -333,6 +397,7 @@ async function stopTracking() {
     startTime: null,
     faviconUrl: null,
     isNewVisit: false,
+    sessionDate: null,
   };
   console.log("Clarity: Stopped tracking");
 }
@@ -403,6 +468,14 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     await checkAndSendNotifications();
   } else if (alarm.name === "resetNotifications") {
     await resetNotificationTracker();
+  } else if (alarm.name === "midnightReset") {
+    console.log("Clarity: Midnight reset triggered");
+    // Force save current session (will handle day change)
+    await saveCurrentSession();
+    // Reset notification tracker
+    await resetNotificationTracker();
+    // Update blocking rules (timers reset daily)
+    await updateBlockingRules();
   }
 });
 
