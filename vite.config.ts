@@ -1,0 +1,30 @@
+import path from "node:path";
+import { crx } from "@crxjs/vite-plugin";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+import manifest from "./manifest.json";
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [
+    react({
+      babel: {
+        plugins: [["babel-plugin-react-compiler"]],
+      },
+    }),
+    crx({ manifest }),
+  ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        popup: "popup.html",
+        blocked: "blocked.html",
+      },
+    },
+  },
+});
