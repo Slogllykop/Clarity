@@ -20,6 +20,9 @@ let currentSession: {
 // Cache for timers to avoid frequent DB reads
 let timerCache: Map<string, WebsiteTimer> = new Map();
 
+// Track notifications sent per domain to avoid duplicates
+let notificationTracker: Map<string, Set<number>> = new Map(); // domain -> Set of threshold values already notified
+
 /**
  * Initialize the service worker
  */
@@ -34,6 +37,9 @@ async function initialize() {
 
   // Set up periodic rule update alarm (every minute to check timer limits)
   chrome.alarms.create("updateRules", { periodInMinutes: 1 });
+
+  // Set up notification check alarm (every 30 seconds)
+  chrome.alarms.create("checkNotifications", { periodInMinutes: 0.5 });
 
   // Check for active tab on startup
   checkActiveTab();
@@ -207,6 +213,87 @@ async function checkTimerLimit(domain: string, timeSpent: number) {
 }
 
 /**
+ * Check and send screen time notifications
+ */
+async function checkAndSendNotifications() {
+  try {
+    // Check if reminders are enabled
+    const settings = await db.getSettings();
+    if (!settings?.reminderEnabled || !settings?.reminderThresholds) {
+      return;
+    }
+
+    const today = getTodayDate();
+    const activities = await db.getWebsiteActivitiesForDate(today);
+    const thresholds = settings.reminderThresholds; // [1800, 3600, 7200] = [30min, 1hr, 2hr]
+
+    // Check each website activity
+    for (const activity of activities) {
+      const domain = activity.domain;
+      const timeSpent = activity.timeSpent;
+
+      // Get or create notification tracker for this domain
+      if (!notificationTracker.has(domain)) {
+        notificationTracker.set(domain, new Set());
+      }
+      const sentThresholds = notificationTracker.get(domain)!;
+
+      // Check each threshold
+      for (const threshold of thresholds) {
+        // If time spent exceeds threshold and we haven't notified yet
+        if (timeSpent >= threshold && !sentThresholds.has(threshold)) {
+          await sendScreenTimeNotification(domain, timeSpent, threshold);
+          sentThresholds.add(threshold);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Clarity: Error checking notifications", error);
+  }
+}
+
+/**
+ * Send a screen time notification
+ */
+async function sendScreenTimeNotification(
+  domain: string,
+  timeSpent: number,
+  threshold: number,
+) {
+  try {
+    const hours = Math.floor(timeSpent / 3600);
+    const minutes = Math.floor((timeSpent % 3600) / 60);
+    const timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+
+    const thresholdMinutes = threshold / 60;
+    const thresholdString = thresholdMinutes >= 60 
+      ? `${Math.floor(thresholdMinutes / 60)}h` 
+      : `${thresholdMinutes}m`;
+
+    await chrome.notifications.create(`clarity-reminder-${domain}-${threshold}`, {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("icons/icon-128.png"),
+      title: "Clarity - Screen Time Reminder",
+      message: `You've spent ${timeString} on ${domain} today (${thresholdString} threshold reached)`,
+      priority: 1,
+      requireInteraction: false,
+    });
+
+    console.log(`Clarity: Sent notification for ${domain} at ${timeString}`);
+  } catch (error) {
+    console.error("Clarity: Error sending notification", error);
+  }
+}
+
+/**
+ * Reset notification tracker daily
+ */
+async function resetNotificationTracker() {
+  notificationTracker.clear();
+  console.log("Clarity: Reset notification tracker for new day");
+}
+
+/**
  * Start tracking a new tab
  */
 async function startTracking(tabId: number, url: string, faviconUrl?: string) {
@@ -306,12 +393,16 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
   }
 });
 
-// Alarm listener for periodic saves
+// Alarm listener for periodic saves and notifications
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === "saveActivity") {
     await saveCurrentSession();
   } else if (alarm.name === "updateRules") {
     await updateBlockingRules();
+  } else if (alarm.name === "checkNotifications") {
+    await checkAndSendNotifications();
+  } else if (alarm.name === "resetNotifications") {
+    await resetNotificationTracker();
   }
 });
 
@@ -394,6 +485,13 @@ async function handleMessage(
 
       case "UPDATE_SETTINGS": {
         await db.saveSettings(message.payload as never);
+        
+        // If enabling reminders, check immediately
+        const payload = message.payload as { reminderEnabled?: boolean };
+        if (payload.reminderEnabled) {
+          await checkAndSendNotifications();
+        }
+        
         sendResponse({ success: true });
         break;
       }
@@ -419,10 +517,32 @@ async function handleMessage(
   }
 }
 
+/**
+ * Get timestamp for next midnight
+ */
+function getNextMidnight(): number {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  return midnight.getTime();
+}
+
 // Initialize on install/update
 chrome.runtime.onInstalled.addListener(() => {
   initialize();
+  
+  // Reset notification tracker at midnight (new day)
+  chrome.alarms.create("resetNotifications", {
+    when: getNextMidnight(),
+    periodInMinutes: 24 * 60, // Daily
+  });
 });
 
 // Initialize immediately
 initialize();
+
+// Set up daily notification reset
+chrome.alarms.create("resetNotifications", {
+  when: getNextMidnight(),
+  periodInMinutes: 24 * 60, // Daily
+});

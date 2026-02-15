@@ -128,32 +128,6 @@ export function ScreenTimeReminders({ onBack }: ScreenTimeRemindersProps) {
 
           {/* Info Section */}
           <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-semibold mb-3">How it works</h4>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3 p-3 bg-zinc-900 rounded-lg">
-                  <div className="w-2 h-2 bg-accent rounded-full mt-1.5 flex-shrink-0" />
-                  <div className="text-sm text-gray-300">
-                    Clarity automatically monitors your time spent on each website
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-zinc-900 rounded-lg">
-                  <div className="w-2 h-2 bg-accent rounded-full mt-1.5 flex-shrink-0" />
-                  <div className="text-sm text-gray-300">
-                    You'll receive notifications at key intervals: 30 minutes, 1 hour, and 2 hours
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-zinc-900 rounded-lg">
-                  <div className="w-2 h-2 bg-accent rounded-full mt-1.5 flex-shrink-0" />
-                  <div className="text-sm text-gray-300">
-                    Reminders help you stay aware of your browsing habits
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Notification Intervals */}
             <div>
               <h4 className="text-sm font-semibold mb-3">Notification Intervals</h4>
@@ -170,6 +144,37 @@ export function ScreenTimeReminders({ onBack }: ScreenTimeRemindersProps) {
                   <div className="text-lg font-bold text-accent">2h</div>
                   <div className="text-xs text-gray-400 mt-1">Third reminder</div>
                 </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold mb-3">How it works</h4>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-3 bg-zinc-900 rounded-lg">
+                  <div className="w-2 h-2 bg-accent rounded-full mt-1.5 flex-shrink-0" />
+                  <div className="text-sm text-gray-300">
+                    Clarity automatically monitors your time spent on each website
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-zinc-900 rounded-lg">
+                  <div className="w-2 h-2 bg-accent rounded-full mt-1.5 flex-shrink-0" />
+                  <div className="text-sm text-gray-300">
+                    Reminders help you stay aware of your browsing habits
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* System Notifications Warning */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3 text-yellow-500">System Notifications</h4>
+              <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
+                <p className="text-sm text-gray-300 leading-relaxed">
+                  <span className="text-white font-medium">Important:</span> Please ensure that
+                  system notifications for your browser are turned on in your OS settings.
+                  Otherwise, the screen time reminders will not work.
+                </p>
               </div>
             </div>
 
