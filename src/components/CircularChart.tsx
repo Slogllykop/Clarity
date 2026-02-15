@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { formatTime } from "@/db/utils";
+import { getDomainDisplayName } from "@/lib/domain-utils";
 import type { WebsiteActivity } from "@/types";
 
 interface CircularChartProps {
@@ -12,22 +13,31 @@ export function CircularChart({ websites, totalTime, onClick }: CircularChartPro
   const chartData = useMemo(() => {
     let currentAngle = -90; // Start from top
     const colors = [
-      "#10b981", // green
-      "#34d399", // light green
-      "#059669", // dark green
-      "#6ee7b7", // lighter green
-      "#047857", // darker green
-      "#a7f3d0", // very light green
-      "#065f46", // very dark green
-      "#d1fae5", // pale green
-      "#064e3b", // deepest green
-      "#ffffff", // white for others
+      "#10b981", // emerald
+      "#3b82f6", // blue
+      "#f59e0b", // amber
+      "#ef4444", // red
+      "#8b5cf6", // violet
+      "#ec4899", // pink
+      "#14b8a6", // teal
+      "#f97316", // orange
+      "#06b6d4", // cyan
+      "#a855f7", // purple
+      "#84cc16", // lime
+      "#6366f1", // indigo
+      "#eab308", // yellow
+      "#22c55e", // green
+      "#d946ef", // fuchsia
+      "#0ea5e9", // sky
+      "#f43f5e", // rose
+      "#facc15", // yellow-400
     ];
 
     return websites.map((website, index) => {
       const percentage = website.percentage;
       const angle = (percentage / 100) * 360;
-      const color = colors[index % colors.length];
+      // Use grey color for "Others" category, otherwise use colors array
+      const color = website.domain === "Others" ? "#6b7280" : colors[index % colors.length];
 
       const segment = {
         domain: website.domain,
@@ -43,7 +53,7 @@ export function CircularChart({ websites, totalTime, onClick }: CircularChartPro
   }, [websites]);
 
   const radius = 80;
-  const strokeWidth = 20;
+  const strokeWidth = 14; // Reduced from 20 to make it less fat
   const normalizedRadius = radius - strokeWidth / 2;
 
   return (
@@ -89,17 +99,19 @@ export function CircularChart({ websites, totalTime, onClick }: CircularChartPro
 
         {/* Center text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-3xl font-bold text-white">{formatTime(totalTime)}</div>
+          <div className="text-3xl font-bold text-white">{formatTime(totalTime, true)}</div>
           <div className="text-xs text-gray-400">Today</div>
         </div>
       </div>
 
       {/* Legend */}
       <div className="flex flex-wrap gap-2 justify-center max-w-[350px]">
-        {chartData.slice(0, 5).map((segment, index) => (
+        {chartData.map((segment, index) => (
           <div key={index} className="flex items-center gap-1 text-xs">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }} />
-            <span className="text-gray-300 truncate max-w-[80px]">{segment.domain}</span>
+            <span className="text-gray-300 truncate max-w-[80px]">
+              {getDomainDisplayName(segment.domain)}
+            </span>
           </div>
         ))}
       </div>

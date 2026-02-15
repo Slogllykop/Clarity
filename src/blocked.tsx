@@ -21,8 +21,23 @@ function BlockedPage() {
     if (limitParam) setLimit(Number.parseInt(limitParam, 10));
   }, []);
 
-  const openExtension = () => {
-    chrome.runtime.sendMessage({ type: "OPEN_POPUP" });
+  const goBack = () => {
+    // Try to go back in history
+    // Since this is a redirect, going back once should work
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      // If no history, try to close the tab or navigate to new tab page
+      if (chrome?.tabs) {
+        chrome.tabs.getCurrent((tab) => {
+          if (tab?.id) {
+            chrome.tabs.remove(tab.id);
+          }
+        });
+      } else {
+        window.close();
+      }
+    }
   };
 
   return (
@@ -76,15 +91,8 @@ function BlockedPage() {
         {/* Actions */}
         <div className="space-y-3">
           <button
-            onClick={openExtension}
+            onClick={goBack}
             className="w-full py-3 bg-accent hover:bg-accent-dark text-black font-semibold rounded-lg transition-colors"
-          >
-            Open Clarity
-          </button>
-
-          <button
-            onClick={() => window.history.back()}
-            className="w-full py-3 text-gray-400 hover:text-white transition-colors"
           >
             Go Back
           </button>

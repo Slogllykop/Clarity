@@ -1,35 +1,42 @@
-import { useState } from "react";
 import { ActivityDetails } from "@/screens/ActivityDetails";
 import { Dashboard } from "@/screens/Dashboard";
 import { ParentalControls } from "@/screens/ParentalControls";
 import { ScreenTimeReminders } from "@/screens/ScreenTimeReminders";
 import { WebsiteTimers } from "@/screens/WebsiteTimers";
-
-type Screen =
-  | "dashboard"
-  | "activity-details"
-  | "website-timers"
-  | "parental-controls"
-  | "screen-time-reminders";
+import { EXTENSION_WIDTH, EXTENSION_MAX_HEIGHT } from "@/constants/layout";
+import { useScreenNavigation, SCREENS } from "@/hooks/useScreenNavigation";
 
 function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>("dashboard");
+  const { currentScreen, navigate, goToDashboard } = useScreenNavigation();
 
-  const navigate = (screen: Screen) => {
-    setCurrentScreen(screen);
-  };
-
-  const goToDashboard = () => {
-    setCurrentScreen("dashboard");
+  const renderScreen = () => {
+    switch (currentScreen) {
+      case SCREENS.DASHBOARD:
+        return <Dashboard onNavigate={navigate} />;
+      case SCREENS.ACTIVITY_DETAILS:
+        return <ActivityDetails onBack={goToDashboard} />;
+      case SCREENS.WEBSITE_TIMERS:
+        return <WebsiteTimers onBack={goToDashboard} />;
+      case SCREENS.PARENTAL_CONTROLS:
+        return <ParentalControls onBack={goToDashboard} />;
+      case SCREENS.SCREEN_TIME_REMINDERS:
+        return <ScreenTimeReminders onBack={goToDashboard} />;
+      default:
+        return <Dashboard onNavigate={navigate} />;
+    }
   };
 
   return (
-    <div className="w-[400px] min-h-[500px] bg-black">
-      {currentScreen === "dashboard" && <Dashboard onNavigate={navigate} />}
-      {currentScreen === "activity-details" && <ActivityDetails onBack={goToDashboard} />}
-      {currentScreen === "website-timers" && <WebsiteTimers onBack={goToDashboard} />}
-      {currentScreen === "parental-controls" && <ParentalControls onBack={goToDashboard} />}
-      {currentScreen === "screen-time-reminders" && <ScreenTimeReminders onBack={goToDashboard} />}
+    <div
+      className="bg-black"
+      style={{
+        width: `${EXTENSION_WIDTH}px`,
+        height: `${EXTENSION_MAX_HEIGHT}px`,
+        maxHeight: `${EXTENSION_MAX_HEIGHT}px`,
+        overflow: "hidden",
+      }}
+    >
+      {renderScreen()}
     </div>
   );
 }

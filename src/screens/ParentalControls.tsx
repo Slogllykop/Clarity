@@ -1,7 +1,9 @@
 import { IconChevronLeft, IconLock, IconShield, IconTrash } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDate, hashPassword, verifyPassword } from "@/db/utils";
 import type { BlockedWebsite, Settings } from "@/types";
+import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 
 interface ParentalControlsProps {
   onBack: () => void;
@@ -184,8 +186,8 @@ export function ParentalControls({ onBack }: ParentalControlsProps) {
   // Setup View
   if (view === "setup") {
     return (
-      <div className="min-h-screen bg-black text-white">
-        <div className="sticky top-0 bg-black border-b border-zinc-800 p-4">
+      <div className="bg-black text-white" style={{ height: `${EXTENSION_MAX_HEIGHT}px` }}>
+        <div className="bg-black border-b border-zinc-800 p-4">
           <div className="flex items-center gap-3">
             <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
               <IconChevronLeft size={24} />
@@ -194,74 +196,76 @@ export function ParentalControls({ onBack }: ParentalControlsProps) {
           </div>
         </div>
 
-        <div className="p-6 max-w-md mx-auto">
-          <div className="text-center mb-8">
-            <IconShield size={48} className="mx-auto mb-4 text-accent" />
-            <p className="text-sm text-gray-400">
-              Create a password to protect parental control settings
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
-                placeholder="Enter password (min 6 characters)"
-              />
+        <ScrollArea style={{ height: `${EXTENSION_MAX_HEIGHT - 73}px` }}>
+          <div className="p-6 max-w-md mx-auto">
+            <div className="text-center mb-8">
+              <IconShield size={48} className="mx-auto mb-4 text-accent" />
+              <p className="text-sm text-gray-400">
+                Create a password to protect parental control settings
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Confirm Password</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
-                placeholder="Confirm password"
-              />
-            </div>
-
-            <div className="pt-4 border-t border-zinc-800">
-              <label className="block text-sm font-medium mb-2">Security Question</label>
-              <input
-                type="text"
-                value={securityQuestion}
-                onChange={(e) => setSecurityQuestion(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
-                placeholder="e.g., What is your pet's name?"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Security Answer</label>
-              <input
-                type="text"
-                value={securityAnswer}
-                onChange={(e) => setSecurityAnswer(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
-                placeholder="Your answer"
-              />
-              <p className="text-xs text-gray-500 mt-1">Used to reset password if forgotten</p>
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
-                {error}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
+                  placeholder="Enter password (min 6 characters)"
+                />
               </div>
-            )}
 
-            <button
-              onClick={handleSetup}
-              className="w-full py-3 bg-accent hover:bg-accent-dark text-black font-semibold rounded-lg transition-colors"
-            >
-              Set Up Protection
-            </button>
+              <div>
+                <label className="block text-sm font-medium mb-2">Confirm Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
+                  placeholder="Confirm password"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-zinc-800">
+                <label className="block text-sm font-medium mb-2">Security Question</label>
+                <input
+                  type="text"
+                  value={securityQuestion}
+                  onChange={(e) => setSecurityQuestion(e.target.value)}
+                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
+                  placeholder="e.g., What is your pet's name?"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Security Answer</label>
+                <input
+                  type="text"
+                  value={securityAnswer}
+                  onChange={(e) => setSecurityAnswer(e.target.value)}
+                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
+                  placeholder="Your answer"
+                />
+                <p className="text-xs text-gray-500 mt-1">Used to reset password if forgotten</p>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={handleSetup}
+                className="w-full py-3 bg-accent hover:bg-accent-dark text-black font-semibold rounded-lg transition-colors"
+              >
+                Set Up Protection
+              </button>
+            </div>
           </div>
-        </div>
+        </ScrollArea>
       </div>
     );
   }
@@ -269,8 +273,8 @@ export function ParentalControls({ onBack }: ParentalControlsProps) {
   // Auth View
   if (view === "auth") {
     return (
-      <div className="min-h-screen bg-black text-white">
-        <div className="sticky top-0 bg-black border-b border-zinc-800 p-4">
+      <div className="bg-black text-white" style={{ height: `${EXTENSION_MAX_HEIGHT}px` }}>
+        <div className="bg-black border-b border-zinc-800 p-4">
           <div className="flex items-center gap-3">
             <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
               <IconChevronLeft size={24} />
@@ -279,45 +283,47 @@ export function ParentalControls({ onBack }: ParentalControlsProps) {
           </div>
         </div>
 
-        <div className="p-6 max-w-md mx-auto">
-          <div className="text-center mb-8">
-            <IconLock size={48} className="mx-auto mb-4 text-accent" />
-            <p className="text-sm text-gray-400">Enter password to access parental controls</p>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleAuth()}
-                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
-                placeholder="Enter password"
-              />
+        <ScrollArea style={{ height: `${EXTENSION_MAX_HEIGHT - 73}px` }}>
+          <div className="p-6 max-w-md mx-auto">
+            <div className="text-center mb-8">
+              <IconLock size={48} className="mx-auto mb-4 text-accent" />
+              <p className="text-sm text-gray-400">Enter password to access parental controls</p>
             </div>
 
-            {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
-                {error}
+            <div className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleAuth()}
+                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
+                  placeholder="Enter password"
+                />
               </div>
-            )}
 
-            <button
-              onClick={handleAuth}
-              className="w-full py-3 bg-accent hover:bg-accent-dark text-black font-semibold rounded-lg transition-colors"
-            >
-              Unlock
-            </button>
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
 
-            <button
-              onClick={() => setView("reset")}
-              className="w-full py-2 text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              Forgot password?
-            </button>
+              <button
+                onClick={handleAuth}
+                className="w-full py-3 bg-accent hover:bg-accent-dark text-black font-semibold rounded-lg transition-colors"
+              >
+                Unlock
+              </button>
+
+              <button
+                onClick={() => setView("reset")}
+                className="w-full py-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Forgot password?
+              </button>
+            </div>
           </div>
-        </div>
+        </ScrollArea>
       </div>
     );
   }
@@ -325,8 +331,8 @@ export function ParentalControls({ onBack }: ParentalControlsProps) {
   // Reset View
   if (view === "reset") {
     return (
-      <div className="min-h-screen bg-black text-white">
-        <div className="sticky top-0 bg-black border-b border-zinc-800 p-4">
+      <div className="bg-black text-white" style={{ height: `${EXTENSION_MAX_HEIGHT}px` }}>
+        <div className="bg-black border-b border-zinc-800 p-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setView("auth")}
@@ -338,49 +344,51 @@ export function ParentalControls({ onBack }: ParentalControlsProps) {
           </div>
         </div>
 
-        <div className="p-6 max-w-md mx-auto">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Security Question</label>
-              <div className="p-3 bg-zinc-900 rounded-lg text-gray-300 text-sm">
-                {settings?.securityQuestion}
+        <ScrollArea style={{ height: `${EXTENSION_MAX_HEIGHT - 73}px` }}>
+          <div className="p-6 max-w-md mx-auto">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Security Question</label>
+                <div className="p-3 bg-zinc-900 rounded-lg text-gray-300 text-sm">
+                  {settings?.securityQuestion}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Your Answer</label>
-              <input
-                type="text"
-                value={resetAnswer}
-                onChange={(e) => setResetAnswer(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleReset()}
-                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
-                placeholder="Enter your answer"
-              />
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
-                {error}
+              <div>
+                <label className="block text-sm font-medium mb-2">Your Answer</label>
+                <input
+                  type="text"
+                  value={resetAnswer}
+                  onChange={(e) => setResetAnswer(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleReset()}
+                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
+                  placeholder="Enter your answer"
+                />
               </div>
-            )}
 
-            <button
-              onClick={handleReset}
-              className="w-full py-3 bg-accent hover:bg-accent-dark text-black font-semibold rounded-lg transition-colors"
-            >
-              Reset Password
-            </button>
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={handleReset}
+                className="w-full py-3 bg-accent hover:bg-accent-dark text-black font-semibold rounded-lg transition-colors"
+              >
+                Reset Password
+              </button>
+            </div>
           </div>
-        </div>
+        </ScrollArea>
       </div>
     );
   }
 
   // Dashboard View
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="sticky top-0 bg-black border-b border-zinc-800 p-4">
+    <div className="bg-black text-white" style={{ height: `${EXTENSION_MAX_HEIGHT}px` }}>
+      <div className="bg-black border-b border-zinc-800 p-4">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
             <IconChevronLeft size={24} />
@@ -392,69 +400,73 @@ export function ParentalControls({ onBack }: ParentalControlsProps) {
         </div>
       </div>
 
-      <div className="p-6">
-        {/* Add URL Section */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">Block Website</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newUrl}
-              onChange={(e) => setNewUrl(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleAddBlockedUrl()}
-              className="flex-1 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
-              placeholder="e.g., youtube.com or facebook"
-            />
-            <button
-              onClick={handleAddBlockedUrl}
-              className="px-6 py-3 bg-accent hover:bg-accent-dark text-black font-semibold rounded-lg transition-colors"
-            >
-              Block
-            </button>
+      <ScrollArea style={{ height: `${EXTENSION_MAX_HEIGHT - 73}px` }}>
+        <div className="p-6">
+          {/* Add URL Section */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2">Block Website</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleAddBlockedUrl()}
+                className="flex-1 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:border-accent"
+                placeholder="e.g., youtube.com or facebook"
+              />
+              <button
+                onClick={handleAddBlockedUrl}
+                className="px-6 py-3 bg-accent hover:bg-accent-dark text-black font-semibold rounded-lg transition-colors"
+              >
+                Block
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Enter a domain name or keyword to block. Partial matches will be blocked.
+            </p>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Enter a domain name or keyword to block. Partial matches will be blocked.
-          </p>
-        </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* Blocked List */}
-        <div>
-          <h3 className="text-sm font-medium mb-3">Blocked Websites ({blockedWebsites.length})</h3>
-
-          {blockedWebsites.length === 0 ? (
-            <div className="text-center py-8 text-gray-400 text-sm">No websites blocked yet</div>
-          ) : (
-            <div className="space-y-2">
-              {blockedWebsites.map((blocked) => (
-                <div
-                  key={blocked.id}
-                  className="flex items-center justify-between p-4 bg-zinc-900 rounded-lg border border-zinc-800"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-white truncate">{blocked.urlPattern}</div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      Added {formatDate(blocked.dateAdded.split("T")[0])}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => blocked.id && handleRemoveBlockedUrl(blocked.id)}
-                    className="ml-3 p-2 text-red-400 hover:text-red-300 transition-colors"
-                    title="Remove from block list"
-                  >
-                    <IconTrash size={18} />
-                  </button>
-                </div>
-              ))}
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
+              {error}
             </div>
           )}
+
+          {/* Blocked List */}
+          <div>
+            <h3 className="text-sm font-medium mb-3">
+              Blocked Websites ({blockedWebsites.length})
+            </h3>
+
+            {blockedWebsites.length === 0 ? (
+              <div className="text-center py-8 text-gray-400 text-sm">No websites blocked yet</div>
+            ) : (
+              <div className="space-y-2">
+                {blockedWebsites.map((blocked) => (
+                  <div
+                    key={blocked.id}
+                    className="flex items-center justify-between p-4 bg-zinc-900 rounded-lg border border-zinc-800"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-white truncate">{blocked.urlPattern}</div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        Added {formatDate(blocked.dateAdded.split("T")[0])}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => blocked.id && handleRemoveBlockedUrl(blocked.id)}
+                      className="ml-3 p-2 text-red-400 hover:text-red-300 transition-colors"
+                      title="Remove from block list"
+                    >
+                      <IconTrash size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 }

@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Disable browser scrollbar */
+body {
+  overflow: hidden;
+}
+
+/* Custom scrollbar styling for ScrollArea */
+[data-radix-scroll-area-viewport] {
+  scrollbar-width: thin;
+  scrollbar-color: #10b981 transparent;
+}
+
+[data-radix-scroll-area-viewport]::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb {
+  background-color: #10b981;
+  border-radius: 2.5px;
+  height: 5px;
+}
+
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover {
+  background-color: #059669;
+}
+
 * {
   margin: 0;
   padding: 0;

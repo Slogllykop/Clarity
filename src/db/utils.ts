@@ -2,8 +2,24 @@ import type { WebsiteActivity, WeeklyStats } from "@/types";
 
 /**
  * Format seconds to human readable time
+ * @param compact - If true, formats as "xh xm" or "xm" (no seconds)
  */
-export function formatTime(seconds: number): string {
+export function formatTime(seconds: number, compact = false): string {
+  if (compact) {
+    // Compact format: xh xm or just xm (no seconds)
+    if (seconds < 60) {
+      return "0m";
+    }
+    if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60);
+      return `${minutes}m`;
+    }
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+
+  // Default format: includes seconds
   if (seconds < 60) {
     return `${seconds}s`;
   }
@@ -146,7 +162,7 @@ export function isNewTabPage(url: string): boolean {
  */
 export function groupWebsitesByOthers(
   websites: WebsiteActivity[],
-  topCount = 10,
+  topCount = 5,
 ): WebsiteActivity[] {
   if (websites.length <= topCount) {
     return websites;

@@ -1,6 +1,8 @@
 import { IconBell, IconBellOff, IconChevronLeft } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Settings } from "@/types";
+import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 
 interface ScreenTimeRemindersProps {
   onBack: () => void;
@@ -63,16 +65,16 @@ export function ScreenTimeReminders({ onBack }: ScreenTimeRemindersProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="bg-black flex items-center justify-center" style={{ height: `${EXTENSION_MAX_HEIGHT}px` }}>
         <div className="text-gray-400">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="bg-black text-white" style={{ height: `${EXTENSION_MAX_HEIGHT}px` }}>
       {/* Header */}
-      <div className="sticky top-0 bg-black border-b border-zinc-800 p-4">
+      <div className="bg-black border-b border-zinc-800 p-4">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
             <IconChevronLeft size={24} />
@@ -84,8 +86,9 @@ export function ScreenTimeReminders({ onBack }: ScreenTimeRemindersProps) {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="p-6">
+      <ScrollArea style={{ height: `${EXTENSION_MAX_HEIGHT - 73}px` }}>
+        {/* Content */}
+        <div className="p-6">
         {/* Toggle Card */}
         <div className="bg-zinc-900 rounded-lg border border-zinc-800 p-6 mb-6">
           <div className="flex items-start justify-between">
@@ -176,7 +179,8 @@ export function ScreenTimeReminders({ onBack }: ScreenTimeRemindersProps) {
             </p>
           </div>
         </div>
-      </div>
+        </div>
+      </ScrollArea>
     </div>
   );
 }

@@ -8,11 +8,13 @@ let currentSession: {
   domain: string | null;
   startTime: number | null;
   faviconUrl: string | null;
+  isNewVisit: boolean; // Track if this is a new visit to increment counter
 } = {
   tabId: null,
   domain: null,
   startTime: null,
   faviconUrl: null,
+  isNewVisit: false,
 };
 
 // Cache for timers to avoid frequent DB reads
@@ -25,9 +27,13 @@ async function initialize() {
   console.log("Clarity: Service worker initialized");
   await db.init();
   await loadTimerCache();
+  await updateBlockingRules();
 
   // Set up periodic save alarm (every 10 seconds)
   chrome.alarms.create("saveActivity", { periodInMinutes: 1 / 6 });
+
+  // Set up periodic rule update alarm (every minute to check timer limits)
+  chrome.alarms.create("updateRules", { periodInMinutes: 1 });
 
   // Check for active tab on startup
   checkActiveTab();
@@ -39,6 +45,84 @@ async function initialize() {
 async function loadTimerCache() {
   const timers = await db.getAllTimers();
   timerCache = new Map(timers.map((t) => [t.domain, t]));
+}
+
+/**
+ * Update declarativeNetRequest rules for blocked websites and timers
+ */
+async function updateBlockingRules() {
+  try {
+    // Get blocked websites
+    const blockedWebsites = await db.getAllBlockedWebsites();
+    const timers = await db.getAllTimers();
+
+    // Get today's activities to check timer limits
+    const today = getTodayDate();
+    const activities = await db.getWebsiteActivitiesForDate(today);
+
+    const rules: chrome.declarativeNetRequest.Rule[] = [];
+    let ruleId = 1;
+
+    // Add rules for blocked websites (parental controls)
+    for (const blocked of blockedWebsites) {
+      const pattern = blocked.urlPattern.toLowerCase();
+      rules.push({
+        id: ruleId++,
+        priority: 1,
+        action: {
+          type: chrome.declarativeNetRequest.RuleActionType.REDIRECT,
+          redirect: {
+            url: chrome.runtime.getURL(
+              `blocked.html?reason=parental&domain=${encodeURIComponent(pattern)}`,
+            ),
+          },
+        },
+        condition: {
+          urlFilter: `*${pattern}*`,
+          resourceTypes: [chrome.declarativeNetRequest.ResourceType.MAIN_FRAME],
+        },
+      });
+    }
+
+    // Add rules for timer-exceeded websites
+    for (const timer of timers) {
+      if (!timer.enabled) continue;
+
+      const activity = activities.find((a) => a.domain === timer.domain);
+      if (activity && activity.timeSpent >= timer.timeLimit) {
+        rules.push({
+          id: ruleId++,
+          priority: 1,
+          action: {
+            type: chrome.declarativeNetRequest.RuleActionType.REDIRECT,
+            redirect: {
+              url: chrome.runtime.getURL(
+                `blocked.html?reason=timer&domain=${encodeURIComponent(timer.domain)}&limit=${timer.timeLimit}`,
+              ),
+            },
+          },
+          condition: {
+            urlFilter: `*${timer.domain}*`,
+            resourceTypes: [chrome.declarativeNetRequest.ResourceType.MAIN_FRAME],
+          },
+        });
+      }
+    }
+
+    // Remove all existing dynamic rules
+    const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
+    const existingRuleIds = existingRules.map((rule) => rule.id);
+
+    // Update rules
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: existingRuleIds,
+      addRules: rules,
+    });
+
+    console.log(`Clarity: Updated ${rules.length} blocking rules`);
+  } catch (error) {
+    console.error("Clarity: Error updating blocking rules", error);
+  }
 }
 
 /**
@@ -63,11 +147,14 @@ async function saveCurrentSession() {
       domain,
       faviconUrl: currentSession.faviconUrl || existing?.faviconUrl || null,
       timeSpent: (existing?.timeSpent || 0) + timeSpent,
-      visitCount: (existing?.visitCount || 0) + 1,
+      visitCount: (existing?.visitCount || 0) + (currentSession.isNewVisit ? 1 : 0),
       lastVisit: Date.now(),
     };
 
     await db.saveWebsiteActivity(activity);
+
+    // Reset the new visit flag after first save
+    currentSession.isNewVisit = false;
 
     // Update daily total
     const dailyActivities = await db.getWebsiteActivitiesForDate(today);
@@ -100,10 +187,22 @@ async function checkTimerLimit(domain: string, timeSpent: number) {
   if (!timer || !timer.enabled) return;
 
   if (timeSpent >= timer.timeLimit) {
-    // Block the website
+    // Block the website by updating rules
     console.log(`Clarity: Timer limit exceeded for ${domain}`);
-    // We'll handle blocking via declarativeNetRequest
-    // For now, just log it
+    await updateBlockingRules();
+
+    // Close the current tab if it's the domain that exceeded the limit
+    if (currentSession.domain === domain && currentSession.tabId) {
+      try {
+        const tab = await chrome.tabs.get(currentSession.tabId);
+        if (tab && tab.url && extractDomain(tab.url) === domain) {
+          // Reload the tab to trigger the block
+          await chrome.tabs.reload(currentSession.tabId);
+        }
+      } catch (error) {
+        console.error("Clarity: Error reloading tab after timer exceeded", error);
+      }
+    }
   }
 }
 
@@ -122,37 +221,15 @@ async function startTracking(tabId: number, url: string, faviconUrl?: string) {
 
   const domain = extractDomain(url);
 
-  // Check if domain is blocked
-  const blocked = await isBlockedDomain(domain);
-  if (blocked) {
-    // Redirect to blocked page
-    chrome.tabs.update(tabId, {
-      url: chrome.runtime.getURL(`blocked.html?reason=parental&domain=${domain}`),
-    });
-    return;
-  }
-
-  // Check if timer limit is exceeded
-  const timer = timerCache.get(domain);
-  if (timer?.enabled) {
-    const today = getTodayDate();
-    const activity = await db.getWebsiteActivity(today, domain);
-    if (activity && activity.timeSpent >= timer.timeLimit) {
-      // Redirect to blocked page
-      chrome.tabs.update(tabId, {
-        url: chrome.runtime.getURL(
-          `blocked.html?reason=timer&domain=${domain}&limit=${timer.timeLimit}`,
-        ),
-      });
-      return;
-    }
-  }
+  // Note: Blocking is now handled by declarativeNetRequest rules
+  // No need to manually redirect here, as rules will intercept before page loads
 
   currentSession = {
     tabId,
     domain,
     startTime: Date.now(),
     faviconUrl: faviconUrl || null,
+    isNewVisit: true, // Mark as new visit
   };
 
   console.log(`Clarity: Started tracking ${domain}`);
@@ -168,20 +245,9 @@ async function stopTracking() {
     domain: null,
     startTime: null,
     faviconUrl: null,
+    isNewVisit: false,
   };
   console.log("Clarity: Stopped tracking");
-}
-
-/**
- * Check if domain is blocked
- */
-async function isBlockedDomain(domain: string): Promise<boolean> {
-  const blocked = await db.getAllBlockedWebsites();
-  return blocked.some((b) => {
-    const pattern = b.urlPattern.toLowerCase();
-    const domainLower = domain.toLowerCase();
-    return domainLower.includes(pattern) || pattern.includes(domainLower);
-  });
 }
 
 /**
@@ -244,6 +310,8 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === "saveActivity") {
     await saveCurrentSession();
+  } else if (alarm.name === "updateRules") {
+    await updateBlockingRules();
   }
 });
 
@@ -288,6 +356,7 @@ async function handleMessage(
         const timer = message.payload as WebsiteTimer;
         await db.saveTimer(timer);
         await loadTimerCache(); // Refresh cache
+        await updateBlockingRules(); // Update rules immediately
         sendResponse({ success: true });
         break;
       }
@@ -296,6 +365,7 @@ async function handleMessage(
         const { domain } = message.payload as { domain: string };
         await db.deleteTimer(domain);
         await loadTimerCache(); // Refresh cache
+        await updateBlockingRules(); // Update rules immediately
         sendResponse({ success: true });
         break;
       }
@@ -303,6 +373,7 @@ async function handleMessage(
       case "ADD_BLOCKED_URL": {
         const { urlPattern } = message.payload as { urlPattern: string };
         await db.addBlockedWebsite(urlPattern);
+        await updateBlockingRules(); // Update rules immediately
         sendResponse({ success: true });
         break;
       }
@@ -310,6 +381,7 @@ async function handleMessage(
       case "REMOVE_BLOCKED_URL": {
         const { id } = message.payload as { id: number };
         await db.deleteBlockedWebsite(id);
+        await updateBlockingRules(); // Update rules immediately
         sendResponse({ success: true });
         break;
       }

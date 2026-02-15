@@ -2,18 +2,14 @@ import { IconBell, IconClock, IconShield } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { CircularChart } from "@/components/CircularChart";
 import { FeatureCard } from "@/components/FeatureCard";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { calculatePercentages, getTodayDate, groupWebsitesByOthers } from "@/db/utils";
 import type { DailyActivity, WebsiteActivity } from "@/types";
-
-type Screen =
-  | "dashboard"
-  | "activity-details"
-  | "website-timers"
-  | "parental-controls"
-  | "screen-time-reminders";
+import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
+import type { ScreenName } from "@/hooks/useScreenNavigation";
 
 interface DashboardProps {
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: ScreenName) => void;
 }
 
 export function Dashboard({ onNavigate }: DashboardProps) {
@@ -23,9 +19,28 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
   const loadTodayStats = async () => {
     try {
-      const response = await chrome.runtime.sendMessage({ type: "GET_TODAY_STATS" });
-      setDailyActivity(response.daily || { date: getTodayDate(), totalTime: 0, websiteCount: 0 });
-      setWebsites(response.websites || []);
+      const [statsResponse, blockedResponse] = await Promise.all([
+        chrome.runtime.sendMessage({ type: "GET_TODAY_STATS" }),
+        chrome.runtime.sendMessage({ type: "GET_BLOCKED_WEBSITES" }),
+      ]);
+
+      setDailyActivity(
+        statsResponse.daily || { date: getTodayDate(), totalTime: 0, websiteCount: 0 },
+      );
+
+      // Filter out blocked websites from the chart
+      const blockedDomains = (blockedResponse.blocked || []).map((b: { urlPattern: string }) =>
+        b.urlPattern.toLowerCase(),
+      );
+
+      const filteredWebsites = (statsResponse.websites || []).filter((website: WebsiteActivity) => {
+        const domainLower = website.domain.toLowerCase();
+        return !blockedDomains.some(
+          (blocked: string) => domainLower.includes(blocked) || blocked.includes(domainLower),
+        );
+      });
+
+      setWebsites(filteredWebsites);
     } catch (error) {
       console.error("Error loading stats:", error);
     } finally {
@@ -41,7 +56,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const websitesWithPercentage = calculatePercentages(groupWebsitesByOthers(websites, 10));
+  const websitesWithPercentage = calculatePercentages(groupWebsitesByOthers(websites, 5));
   const totalTime = dailyActivity?.totalTime || 0;
   const websiteCount = dailyActivity?.websiteCount || 0;
 
@@ -54,56 +69,58 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold">
-          <span className="text-white">Clar</span>
-          <span className="text-accent">ity</span>
-        </h1>
-        <p className="text-gray-400 text-sm mt-1">Digital Wellbeing</p>
-      </div>
+    <ScrollArea className="bg-black text-white" style={{ height: `${EXTENSION_MAX_HEIGHT}px` }}>
+      <div className="p-6">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold">
+            <span className="text-white">Clar</span>
+            <span className="text-accent">ity</span>
+          </h1>
+          <p className="text-gray-400 text-sm mt-1">Digital Wellbeing</p>
+        </div>
 
-      {/* Circular Chart */}
-      <div className="mb-6">
-        <CircularChart
-          websites={websitesWithPercentage}
-          totalTime={totalTime}
-          onClick={() => onNavigate("activity-details")}
-        />
-      </div>
+        {/* Circular Chart */}
+        <div className="mb-6">
+          <CircularChart
+            websites={websitesWithPercentage}
+            totalTime={totalTime}
+            onClick={() => onNavigate("activity-details")}
+          />
+        </div>
 
-      {/* Website Counter */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 rounded-full border border-zinc-800">
-          <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-          <span className="text-sm text-gray-300">
-            {websiteCount} website{websiteCount !== 1 ? "s" : ""} visited today
-          </span>
+        {/* Website Counter */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 rounded-full border border-zinc-800">
+            <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+            <span className="text-sm text-gray-300">
+              {websiteCount} website{websiteCount !== 1 ? "s" : ""} visited today
+            </span>
+          </div>
+        </div>
+
+        {/* Features */}
+        <div className="space-y-3">
+          <FeatureCard
+            icon={<IconClock size={20} />}
+            title="Website Timers"
+            description="Set time limits for specific websites"
+            onClick={() => onNavigate("website-timers")}
+          />
+          <FeatureCard
+            icon={<IconShield size={20} />}
+            title="Parental Controls"
+            description="Block websites with password protection"
+            onClick={() => onNavigate("parental-controls")}
+          />
+          <FeatureCard
+            icon={<IconBell size={20} />}
+            title="Screen Time Reminders"
+            description="Get notified about excessive usage"
+            onClick={() => onNavigate("screen-time-reminders")}
+          />
         </div>
       </div>
-
-      {/* Features */}
-      <div className="space-y-3">
-        <FeatureCard
-          icon={<IconClock size={20} />}
-          title="Website Timers"
-          description="Set time limits for specific websites"
-          onClick={() => onNavigate("website-timers")}
-        />
-        <FeatureCard
-          icon={<IconShield size={20} />}
-          title="Parental Controls"
-          description="Block websites with password protection"
-          onClick={() => onNavigate("parental-controls")}
-        />
-        <FeatureCard
-          icon={<IconBell size={20} />}
-          title="Screen Time Reminders"
-          description="Get notified about excessive usage"
-          onClick={() => onNavigate("screen-time-reminders")}
-        />
-      </div>
-    </div>
+    </ScrollArea>
   );
 }

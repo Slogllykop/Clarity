@@ -2,6 +2,7 @@ import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { WebsiteList } from "@/components/WebsiteList";
 import { WeeklyBarChart } from "@/components/WeeklyBarChart";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   formatDate,
   formatTime,
@@ -11,6 +12,7 @@ import {
   getWeekRange,
 } from "@/db/utils";
 import type { WebsiteActivity, WeeklyStats } from "@/types";
+import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 
 interface ActivityDetailsProps {
   onBack: () => void;
@@ -85,9 +87,9 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="bg-black text-white" style={{ height: `${EXTENSION_MAX_HEIGHT}px` }}>
       {/* Header */}
-      <div className="sticky top-0 bg-black border-b border-zinc-800 p-4">
+      <div className="bg-black border-b border-zinc-800 p-4">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
             <IconChevronLeft size={24} />
@@ -96,52 +98,59 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="p-6 border-b border-zinc-800">
-        {/* Total Time */}
-        <div className="text-center mb-6">
-          <div className="text-4xl font-bold text-white mb-1">{formatTime(totalTime)}</div>
-          <div className="text-sm text-gray-400">{getRelativeDayLabel(selectedDate)}</div>
-        </div>
-
-        {/* Weekly Bar Chart */}
-        <WeeklyBarChart
-          data={weeklyStats}
-          selectedDate={selectedDate}
-          onDateSelect={setSelectedDate}
-        />
-
-        {/* Day Navigation */}
-        <div className="flex items-center justify-between mt-6">
-          <button
-            onClick={() => navigateDay("prev")}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
-          >
-            <IconChevronLeft size={20} />
-          </button>
-
-          <div className="text-center">
-            <div className="text-sm font-medium text-white">
-              {getRelativeDayLabel(selectedDate)}
-            </div>
-            <div className="text-xs text-gray-400">{formatDate(selectedDate)}</div>
+      <ScrollArea style={{ height: `${EXTENSION_MAX_HEIGHT - 73}px` }}>
+        {/* Stats Section */}
+        <div className="p-6 border-b border-zinc-800">
+          {/* Total Time */}
+          <div className="text-center mb-6">
+            <div className="text-4xl font-bold text-white mb-1">{formatTime(totalTime)}</div>
+            <div className="text-sm text-gray-400">{getRelativeDayLabel(selectedDate)}</div>
           </div>
 
-          <button
-            onClick={() => navigateDay("next")}
-            disabled={selectedDate >= getTodayDate()}
-            className="p-2 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <IconChevronRight size={20} />
-          </button>
-        </div>
-      </div>
+          {/* Weekly Bar Chart */}
+          <WeeklyBarChart
+            data={weeklyStats}
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+          />
 
-      {/* Website List */}
-      <div className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Websites Visited</h3>
-        <WebsiteList websites={websites} />
-      </div>
+          {/* Day Navigation */}
+          <div className="flex items-center justify-between mt-6">
+            <button
+              onClick={() => navigateDay("prev")}
+              className="p-2 text-gray-400 hover:text-white transition-colors"
+            >
+              <IconChevronLeft size={20} />
+            </button>
+
+            <div className="text-center">
+              <div className="text-sm font-medium text-white">
+                {getRelativeDayLabel(selectedDate)}
+              </div>
+              <div className="text-xs text-gray-400">{formatDate(selectedDate)}</div>
+            </div>
+
+            <button
+              onClick={() => navigateDay("next")}
+              disabled={selectedDate >= getTodayDate()}
+              className="p-2 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <IconChevronRight size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Website List */}
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Websites Visited</h3>
+            <span className="text-sm text-gray-400">
+              {websites.length} {websites.length === 1 ? "website" : "websites"}
+            </span>
+          </div>
+          <WebsiteList websites={websites} />
+        </div>
+      </ScrollArea>
     </div>
   );
 }
