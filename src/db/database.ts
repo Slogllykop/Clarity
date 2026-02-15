@@ -321,6 +321,143 @@ class ClarityDatabase {
     });
   }
 
+  // ==================== IMPORT/EXPORT OPERATIONS ====================
+
+  /**
+   * Export all database data to a JSON object
+   */
+  async exportAllData(): Promise<{
+    version: number;
+    exportDate: string;
+    data: {
+      dailyActivity: DailyActivity[];
+      websiteActivity: WebsiteActivity[];
+      websiteTimers: WebsiteTimer[];
+      blockedWebsites: BlockedWebsite[];
+      settings: Settings | null;
+    };
+  }> {
+    await this.init();
+
+    const [dailyActivity, websiteActivity, websiteTimers, blockedWebsites, settings] =
+      await Promise.all([
+        this.getAllFromStore<DailyActivity>(STORES.DAILY_ACTIVITY),
+        this.getAllFromStore<WebsiteActivity>(STORES.WEBSITE_ACTIVITY),
+        this.getAllFromStore<WebsiteTimer>(STORES.WEBSITE_TIMERS),
+        this.getAllFromStore<BlockedWebsite>(STORES.BLOCKED_WEBSITES),
+        this.getSettings(),
+      ]);
+
+    return {
+      version: DB_VERSION,
+      exportDate: new Date().toISOString(),
+      data: {
+        dailyActivity,
+        websiteActivity,
+        websiteTimers,
+        blockedWebsites,
+        settings,
+      },
+    };
+  }
+
+  /**
+   * Import data from a JSON object and restore to database
+   */
+  async importAllData(importData: {
+    version: number;
+    data: {
+      dailyActivity: DailyActivity[];
+      websiteActivity: WebsiteActivity[];
+      websiteTimers: WebsiteTimer[];
+      blockedWebsites: BlockedWebsite[];
+      settings: Settings | null;
+    };
+  }): Promise<void> {
+    await this.init();
+
+    // Validate data structure
+    if (!importData.data) {
+      throw new Error("Invalid import data structure");
+    }
+
+    // Clear existing data
+    await this.clearAllStores();
+
+    // Import all data
+    await Promise.all([
+      this.importToStore(STORES.DAILY_ACTIVITY, importData.data.dailyActivity || []),
+      this.importToStore(STORES.WEBSITE_ACTIVITY, importData.data.websiteActivity || []),
+      this.importToStore(STORES.WEBSITE_TIMERS, importData.data.websiteTimers || []),
+      this.importToStore(STORES.BLOCKED_WEBSITES, importData.data.blockedWebsites || []),
+    ]);
+
+    // Import settings
+    if (importData.data.settings) {
+      await this.saveSettings(importData.data.settings);
+    }
+  }
+
+  /**
+   * Helper: Get all records from a store
+   */
+  private async getAllFromStore<T>(storeName: string): Promise<T[]> {
+    const store = await this.getTransaction(storeName);
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result as T[]);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Helper: Import data to a store
+   */
+  private async importToStore(storeName: string, data: any[]): Promise<void> {
+    const store = await this.getTransaction(storeName, "readwrite");
+    
+    return new Promise((resolve, reject) => {
+      let completed = 0;
+      const total = data.length;
+
+      if (total === 0) {
+        resolve();
+        return;
+      }
+
+      for (const item of data) {
+        const request = store.add(item);
+        
+        request.onsuccess = () => {
+          completed++;
+          if (completed === total) {
+            resolve();
+          }
+        };
+        
+        request.onerror = () => reject(request.error);
+      }
+    });
+  }
+
+  /**
+   * Helper: Clear all data from all stores
+   */
+  private async clearAllStores(): Promise<void> {
+    const storeNames = Object.values(STORES);
+    
+    await Promise.all(
+      storeNames.map(async (storeName) => {
+        const store = await this.getTransaction(storeName, "readwrite");
+        return new Promise<void>((resolve, reject) => {
+          const request = store.clear();
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      })
+    );
+  }
+
   /**
    * Close the database connection
    */

@@ -10,12 +10,20 @@ interface WeeklyBarChartProps {
   onDateSelect: (date: string) => void;
 }
 
+interface ChartDataPoint {
+  day: string;
+  date: string;
+  time: number;
+  isSelected: boolean;
+  isFuture: boolean;
+}
+
 interface CustomBarProps {
   x?: number;
   y?: number;
   width?: number;
   height?: number;
-  payload?: any;
+  payload?: ChartDataPoint;
   onDateSelect: (date: string) => void;
 }
 
@@ -124,7 +132,9 @@ export function WeeklyBarChart({ data, selectedDate, onDateSelect }: WeeklyBarCh
 
           <Bar
             dataKey="time"
-            shape={(props: any) => <CustomBar {...props} onDateSelect={onDateSelect} />}
+            shape={(props: Omit<CustomBarProps, "onDateSelect">) => (
+              <CustomBar {...props} onDateSelect={onDateSelect} />
+            )}
           />
         </BarChart>
       </ChartContainer>

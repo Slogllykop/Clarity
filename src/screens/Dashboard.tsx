@@ -1,5 +1,5 @@
-import { IconBell, IconClock, IconShield } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { IconBell, IconClock, IconShield, IconDownload, IconUpload } from "@tabler/icons-react";
+import { useEffect, useState, useRef } from "react";
 import { CircularChart } from "@/components/CircularChart";
 import { FeatureCard } from "@/components/FeatureCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,6 +7,7 @@ import { calculatePercentages, getTodayDate, groupWebsitesByOthers } from "@/db/
 import type { DailyActivity, WebsiteActivity } from "@/types";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 import type { ScreenName } from "@/hooks/useScreenNavigation";
+import { db } from "@/db/database";
 
 interface DashboardProps {
   onNavigate: (screen: ScreenName) => void;
@@ -16,6 +17,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const [dailyActivity, setDailyActivity] = useState<DailyActivity | null>(null);
   const [websites, setWebsites] = useState<WebsiteActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadTodayStats = async () => {
     try {
@@ -59,6 +63,77 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const websitesWithPercentage = calculatePercentages(groupWebsitesByOthers(websites, 5));
   const totalTime = dailyActivity?.totalTime || 0;
   const websiteCount = dailyActivity?.websiteCount || 0;
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const exportData = await db.exportAllData();
+      
+      // Create JSON blob
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `clarity-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log("Export successful");
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Failed to export data. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      
+      // Read file
+      const text = await file.text();
+      const importData = JSON.parse(text);
+      
+      // Validate structure
+      if (!importData.data || !importData.version) {
+        throw new Error("Invalid backup file format");
+      }
+      
+      // Import to database
+      await db.importAllData(importData);
+      
+      // Reload stats
+      await loadTodayStats();
+      
+      // Notify background worker to reload
+      await chrome.runtime.sendMessage({ type: "RELOAD_DATA" });
+      
+      alert("Data imported successfully!");
+      console.log("Import successful");
+    } catch (error) {
+      console.error("Import failed:", error);
+      alert(`Failed to import data: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setImporting(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
 
   if (loading) {
     return (
@@ -118,6 +193,43 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             title="Screen Time Reminders"
             description="Get notified about excessive usage"
             onClick={() => onNavigate("screen-time-reminders")}
+          />
+        </div>
+
+        {/* Import/Export Section */}
+        <div className="mt-6 pt-6 border-t border-zinc-800">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3">Data Management</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <IconDownload size={18} className="text-accent" />
+              <span className="text-sm font-medium text-white">
+                {exporting ? "Exporting..." : "Export Data"}
+              </span>
+            </button>
+
+            <button
+              onClick={handleImportClick}
+              disabled={importing}
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <IconUpload size={18} className="text-accent" />
+              <span className="text-sm font-medium text-white">
+                {importing ? "Importing..." : "Import Data"}
+              </span>
+            </button>
+          </div>
+          
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={handleImport}
+            className="hidden"
           />
         </div>
       </div>
