@@ -1,9 +1,9 @@
 import { IconChevronLeft, IconClock, IconTrash, IconWorld } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 import { formatTime, getTodayDate } from "@/db/utils";
 import type { WebsiteActivity, WebsiteTimer } from "@/types";
-import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 
 interface WebsiteTimersProps {
   onBack: () => void;

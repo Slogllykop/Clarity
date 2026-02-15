@@ -1,8 +1,8 @@
 import { IconBell, IconBellOff, IconChevronLeft } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { Settings } from "@/types";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
+import type { Settings } from "@/types";
 
 interface ScreenTimeRemindersProps {
   onBack: () => void;
@@ -167,15 +167,12 @@ export function ScreenTimeReminders({ onBack }: ScreenTimeRemindersProps) {
             </div>
 
             {/* System Notifications Warning */}
-            <div>
-              <h4 className="text-sm font-semibold mb-3 text-yellow-500">System Notifications</h4>
-              <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
-                <p className="text-sm text-gray-300 leading-relaxed">
-                  <span className="text-white font-medium">Important:</span> Please ensure that
-                  system notifications for your browser are turned on in your OS settings.
-                  Otherwise, the screen time reminders will not work.
-                </p>
-              </div>
+            <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
+              <p className="text-xs text-gray-300 leading-relaxed">
+                <strong className="text-yellow-500">System Notifications:</strong> Please ensure
+                that system notifications for your browser are turned on in your OS settings.
+                Otherwise, the screen time reminders will not work.
+              </p>
             </div>
 
             {/* Privacy Note */}

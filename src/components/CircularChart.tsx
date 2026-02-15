@@ -1,9 +1,9 @@
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Label, Pie, PieChart } from "recharts";
+import { ChartContainer, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { formatTime } from "@/db/utils";
 import { getDomainDisplayName } from "@/lib/domain-utils";
 import type { WebsiteActivity } from "@/types";
-import { ChartContainer, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 
 interface CircularChartProps {
   websites: Array<WebsiteActivity & { percentage: number }>;
@@ -126,9 +126,10 @@ export function CircularChart({ websites, totalTime, onClick }: CircularChartPro
     : false;
 
   return (
-    <div
-      className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
+    <button
+      className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-lg w-full bg-transparent border-none p-0"
       onClick={onClick}
+      type="button"
     >
       <div className="h-[320px] w-[340px]">
         <ChartContainer config={chartConfig} className="h-full w-full">
@@ -183,6 +184,6 @@ export function CircularChart({ websites, totalTime, onClick }: CircularChartPro
           </PieChart>
         </ChartContainer>
       </div>
-    </div>
+    </button>
   );
 }

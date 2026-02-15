@@ -23,7 +23,7 @@ let currentSession: {
 let timerCache: Map<string, WebsiteTimer> = new Map();
 
 // Track notifications sent per domain to avoid duplicates
-let notificationTracker: Map<string, Set<number>> = new Map(); // domain -> Set of threshold values already notified
+const notificationTracker: Map<string, Set<number>> = new Map(); // domain -> Set of threshold values already notified
 
 /**
  * Initialize the service worker
@@ -148,19 +148,21 @@ async function saveCurrentSession() {
   }
 
   const today = getTodayDate();
-  
+
   // Check if the day has changed since the session started
   if (currentSession.sessionDate && currentSession.sessionDate !== today) {
-    console.log(`Clarity: Day changed from ${currentSession.sessionDate} to ${today}, resetting session`);
-    
+    console.log(
+      `Clarity: Day changed from ${currentSession.sessionDate} to ${today}, resetting session`,
+    );
+
     // Calculate midnight timestamp for the transition
     const todayMidnight = new Date(today);
     todayMidnight.setHours(0, 0, 0, 0);
     const midnightTime = todayMidnight.getTime();
-    
+
     // Save time accumulated up to midnight for the previous day
     const timeUntilMidnight = Math.floor((midnightTime - currentSession.startTime) / 1000);
-    
+
     if (timeUntilMidnight > 0) {
       const domain = currentSession.domain;
       try {
@@ -174,7 +176,7 @@ async function saveCurrentSession() {
           lastVisit: midnightTime - 1, // Just before midnight
         };
         await db.saveWebsiteActivity(activity);
-        
+
         // Update daily total for previous day
         const dailyActivities = await db.getWebsiteActivitiesForDate(currentSession.sessionDate);
         const totalTime = dailyActivities.reduce((sum, a) => sum + a.timeSpent, 0);
@@ -184,21 +186,23 @@ async function saveCurrentSession() {
           totalTime,
           websiteCount,
         });
-        
-        console.log(`Clarity: Saved ${timeUntilMidnight}s for ${domain} to previous day ${currentSession.sessionDate}`);
+
+        console.log(
+          `Clarity: Saved ${timeUntilMidnight}s for ${domain} to previous day ${currentSession.sessionDate}`,
+        );
       } catch (error) {
         console.error("Clarity: Error saving previous day session", error);
       }
     }
-    
+
     // Reset session for the new day - start from midnight
     currentSession.startTime = midnightTime;
     currentSession.sessionDate = today;
     currentSession.isNewVisit = true; // New visit for the new day
-    
+
     // Reset notification tracker for new day
     await resetNotificationTracker();
-    
+
     // Update blocking rules (timers reset daily)
     await updateBlockingRules();
   }
@@ -264,7 +268,7 @@ async function checkTimerLimit(domain: string, timeSpent: number) {
     if (currentSession.domain === domain && currentSession.tabId) {
       try {
         const tab = await chrome.tabs.get(currentSession.tabId);
-        if (tab && tab.url && extractDomain(tab.url) === domain) {
+        if (tab?.url && extractDomain(tab.url) === domain) {
           // Reload the tab to trigger the block
           await chrome.tabs.reload(currentSession.tabId);
         }
@@ -318,20 +322,15 @@ async function checkAndSendNotifications() {
 /**
  * Send a screen time notification
  */
-async function sendScreenTimeNotification(
-  domain: string,
-  timeSpent: number,
-  threshold: number,
-) {
+async function sendScreenTimeNotification(domain: string, timeSpent: number, threshold: number) {
   try {
     const hours = Math.floor(timeSpent / 3600);
     const minutes = Math.floor((timeSpent % 3600) / 60);
     const timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 
     const thresholdMinutes = threshold / 60;
-    const thresholdString = thresholdMinutes >= 60 
-      ? `${Math.floor(thresholdMinutes / 60)}h` 
-      : `${thresholdMinutes}m`;
+    const thresholdString =
+      thresholdMinutes >= 60 ? `${Math.floor(thresholdMinutes / 60)}h` : `${thresholdMinutes}m`;
 
     await chrome.notifications.create(`clarity-reminder-${domain}-${threshold}`, {
       type: "basic",
@@ -558,13 +557,13 @@ async function handleMessage(
 
       case "UPDATE_SETTINGS": {
         await db.saveSettings(message.payload as never);
-        
+
         // If enabling reminders, check immediately
         const payload = message.payload as { reminderEnabled?: boolean };
         if (payload.reminderEnabled) {
           await checkAndSendNotifications();
         }
-        
+
         sendResponse({ success: true });
         break;
       }
@@ -603,7 +602,7 @@ function getNextMidnight(): number {
 // Initialize on install/update
 chrome.runtime.onInstalled.addListener(() => {
   initialize();
-  
+
   // Reset notification tracker at midnight (new day)
   chrome.alarms.create("resetNotifications", {
     when: getNextMidnight(),

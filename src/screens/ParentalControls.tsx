@@ -1,9 +1,9 @@
 import { IconChevronLeft, IconLock, IconShield, IconTrash } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 import { formatDate, hashPassword, verifyPassword } from "@/db/utils";
 import type { BlockedWebsite, Settings } from "@/types";
-import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 
 interface ParentalControlsProps {
   onBack: () => void;

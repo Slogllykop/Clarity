@@ -1,8 +1,8 @@
 import { useMemo } from "react";
-import { Bar, BarChart, XAxis, YAxis, Rectangle, CartesianGrid } from "recharts";
+import { Bar, BarChart, CartesianGrid, Rectangle, XAxis, YAxis } from "recharts";
+import { ChartContainer } from "@/components/ui/chart";
 import { getTodayDate } from "@/db/utils";
 import type { WeeklyStats } from "@/types";
-import { ChartContainer } from "@/components/ui/chart";
 
 interface WeeklyBarChartProps {
   data: WeeklyStats[];

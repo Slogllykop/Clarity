@@ -1,10 +1,10 @@
+import { EXTENSION_MAX_HEIGHT, EXTENSION_WIDTH } from "@/constants/layout";
+import { SCREENS, useScreenNavigation } from "@/hooks/useScreenNavigation";
 import { ActivityDetails } from "@/screens/ActivityDetails";
 import { Dashboard } from "@/screens/Dashboard";
 import { ParentalControls } from "@/screens/ParentalControls";
 import { ScreenTimeReminders } from "@/screens/ScreenTimeReminders";
 import { WebsiteTimers } from "@/screens/WebsiteTimers";
-import { EXTENSION_WIDTH, EXTENSION_MAX_HEIGHT } from "@/constants/layout";
-import { useScreenNavigation, SCREENS } from "@/hooks/useScreenNavigation";
 
 function App() {
   const { currentScreen, navigate, goToDashboard } = useScreenNavigation();

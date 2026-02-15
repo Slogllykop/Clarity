@@ -1,13 +1,13 @@
-import { IconBell, IconClock, IconShield, IconDownload, IconUpload } from "@tabler/icons-react";
-import { useEffect, useState, useRef } from "react";
+import { IconBell, IconClock, IconDownload, IconShield, IconUpload } from "@tabler/icons-react";
+import { useEffect, useRef, useState } from "react";
 import { CircularChart } from "@/components/CircularChart";
 import { FeatureCard } from "@/components/FeatureCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { calculatePercentages, getTodayDate, groupWebsitesByOthers } from "@/db/utils";
-import type { DailyActivity, WebsiteActivity } from "@/types";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
-import type { ScreenName } from "@/hooks/useScreenNavigation";
 import { db } from "@/db/database";
+import { calculatePercentages, getTodayDate, groupWebsitesByOthers } from "@/db/utils";
+import type { ScreenName } from "@/hooks/useScreenNavigation";
+import type { DailyActivity, WebsiteActivity } from "@/types";
 
 interface DashboardProps {
   onNavigate: (screen: ScreenName) => void;
@@ -68,21 +68,21 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     try {
       setExporting(true);
       const exportData = await db.exportAllData();
-      
+
       // Create JSON blob
       const jsonStr = JSON.stringify(exportData, null, 2);
       const blob = new Blob([jsonStr], { type: "application/json" });
-      
+
       // Create download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `clarity-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `clarity-backup-${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       console.log("Export successful");
     } catch (error) {
       console.error("Export failed:", error);
@@ -98,25 +98,25 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
     try {
       setImporting(true);
-      
+
       // Read file
       const text = await file.text();
       const importData = JSON.parse(text);
-      
+
       // Validate structure
       if (!importData.data || !importData.version) {
         throw new Error("Invalid backup file format");
       }
-      
+
       // Import to database
       await db.importAllData(importData);
-      
+
       // Reload stats
       await loadTodayStats();
-      
+
       // Notify background worker to reload
       await chrome.runtime.sendMessage({ type: "RELOAD_DATA" });
-      
+
       alert("Data imported successfully!");
       console.log("Import successful");
     } catch (error) {
@@ -222,7 +222,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               </span>
             </button>
           </div>
-          
+
           {/* Hidden file input */}
           <input
             ref={fileInputRef}

@@ -38,8 +38,8 @@ export function formatTime(seconds: number, compact = false): string {
 export function getTodayDate(): string {
   const now = new Date();
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -50,8 +50,8 @@ export function getDateDaysAgo(daysAgo: number): string {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -72,8 +72,8 @@ export function getWeekRange(date: string): { start: string; end: string } {
 
   const formatLocalDate = (date: Date) => {
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
 
@@ -219,15 +219,15 @@ export function generateWeeklyStatsArray(
   dailyActivities: Array<{ date: string; totalTime: number }>,
 ): WeeklyStats[] {
   const stats: WeeklyStats[] = [];
-  const current = new Date(weekRange.start + 'T00:00:00');
-  const end = new Date(weekRange.end + 'T00:00:00');
+  const current = new Date(`${weekRange.start}T00:00:00`);
+  const end = new Date(`${weekRange.end}T00:00:00`);
 
   while (current <= end) {
     const year = current.getFullYear();
-    const month = String(current.getMonth() + 1).padStart(2, '0');
-    const day = String(current.getDate()).padStart(2, '0');
+    const month = String(current.getMonth() + 1).padStart(2, "0");
+    const day = String(current.getDate()).padStart(2, "0");
     const dateStr = `${year}-${month}-${day}`;
-    
+
     const activity = dailyActivities.find((a) => a.date === dateStr);
 
     stats.push({

@@ -413,9 +413,9 @@ class ClarityDatabase {
   /**
    * Helper: Import data to a store
    */
-  private async importToStore(storeName: string, data: any[]): Promise<void> {
+  private async importToStore(storeName: string, data: unknown[]): Promise<void> {
     const store = await this.getTransaction(storeName, "readwrite");
-    
+
     return new Promise((resolve, reject) => {
       let completed = 0;
       const total = data.length;
@@ -427,14 +427,14 @@ class ClarityDatabase {
 
       for (const item of data) {
         const request = store.add(item);
-        
+
         request.onsuccess = () => {
           completed++;
           if (completed === total) {
             resolve();
           }
         };
-        
+
         request.onerror = () => reject(request.error);
       }
     });
@@ -445,7 +445,7 @@ class ClarityDatabase {
    */
   private async clearAllStores(): Promise<void> {
     const storeNames = Object.values(STORES);
-    
+
     await Promise.all(
       storeNames.map(async (storeName) => {
         const store = await this.getTransaction(storeName, "readwrite");
@@ -454,7 +454,7 @@ class ClarityDatabase {
           request.onsuccess = () => resolve();
           request.onerror = () => reject(request.error);
         });
-      })
+      }),
     );
   }
 
