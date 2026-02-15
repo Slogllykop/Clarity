@@ -1,4 +1,11 @@
-import { IconBell, IconClock, IconDownload, IconShield, IconUpload } from "@tabler/icons-react";
+import {
+  IconBell,
+  IconChartBar,
+  IconClock,
+  IconDownload,
+  IconShield,
+  IconUpload,
+} from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { CircularChart } from "@/components/CircularChart";
 import { FeatureCard } from "@/components/FeatureCard";
@@ -193,6 +200,12 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             title="Screen Time Reminders"
             description="Get notified about excessive usage"
             onClick={() => onNavigate("screen-time-reminders")}
+          />
+          <FeatureCard
+            icon={<IconChartBar size={20} />}
+            title="Usage Analytics"
+            description="View detailed usage trends and patterns"
+            onClick={() => onNavigate("usage-analytics")}
           />
         </div>
 

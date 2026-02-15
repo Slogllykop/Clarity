@@ -129,10 +129,7 @@ export function WebsiteTimers({ onBack }: WebsiteTimersProps) {
                 const isEditing = editingDomain === website.domain;
 
                 return (
-                  <div
-                    key={website.domain}
-                    className="bg-zinc-900 rounded-lg border border-zinc-800 p-4"
-                  >
+                  <div key={website.domain} className="pb-4">
                     <div className="flex items-start gap-3">
                       {/* Favicon */}
                       <div className="w-10 h-10 flex items-center justify-center bg-zinc-800 rounded-full flex-shrink-0 mt-1">

@@ -4,6 +4,7 @@ import { ActivityDetails } from "@/screens/ActivityDetails";
 import { Dashboard } from "@/screens/Dashboard";
 import { ParentalControls } from "@/screens/ParentalControls";
 import { ScreenTimeReminders } from "@/screens/ScreenTimeReminders";
+import { UsageAnalytics } from "@/screens/UsageAnalytics";
 import { WebsiteTimers } from "@/screens/WebsiteTimers";
 
 function App() {
@@ -21,6 +22,8 @@ function App() {
         return <ParentalControls onBack={goToDashboard} />;
       case SCREENS.SCREEN_TIME_REMINDERS:
         return <ScreenTimeReminders onBack={goToDashboard} />;
+      case SCREENS.USAGE_ANALYTICS:
+        return <UsageAnalytics onBack={goToDashboard} />;
       default:
         return <Dashboard onNavigate={navigate} />;
     }
