@@ -1,16 +1,18 @@
 # Clarity
 
-A digital wellbeing Chrome extension that helps you track browsing activity, set website time limits, and stay in control of your screen time — all while keeping your data fully offline.
+A digital wellbeing Chrome extension that helps you track browsing activity, set website time limits, and stay in control of your screen time, all while keeping your data fully offline.
 
 ## Features
 
-- **Activity Tracking** — Automatically tracks time spent on every website with per-domain breakdowns, visit counts, and favicon caching.
-- **Dashboard** — A donut chart showing today's browsing distribution at a glance, with a live website visit counter.
-- **Activity Details** — Interactive weekly bar chart with day-by-day navigation and a ranked list of all visited websites.
-- **Website Timers** — Set daily time limits for specific websites. When exceeded, the site is blocked for the rest of the day (resets at midnight).
-- **Parental Controls** — Password-protected URL blocking with security question recovery. Uses SHA-256 hashing via the Web Crypto API.
-- **Screen Time Reminders** — Browser notifications at 30 min, 1 hr, and 2 hr thresholds per website.
-- **Blocked Page** — A custom full-page screen shown for timer-exceeded or parentally-blocked websites, with context-aware messaging.
+- **Activity Tracking**: Automatically tracks time spent on every website with per-domain breakdowns, visit counts, and favicon caching.
+- **Dashboard**: A donut chart showing today's browsing distribution at a glance, with a live website visit counter.
+- **Usage Analytics**: Analyze long-term browsing trends with monthly, quarterly, and bi-annual charts.
+- **Activity Details**: Interactive weekly bar chart with day-by-day navigation and a ranked list of all visited websites.
+- **Website Timers**: Set daily time limits for specific websites. When exceeded, the site is blocked for the rest of the day (resets at midnight).
+- **Parental Controls**: Password-protected URL blocking with security question recovery. Uses SHA-256 hashing via the Web Crypto API.
+- **Screen Time Reminders**: Browser notifications at 30 min, 1 hr, and 2 hr thresholds per website.
+- **Data Management**: Backup all your tracking data to a JSON file and restore it anytime.
+- **Blocked Page**: A custom full-page screen shown for timer-exceeded or parentally-blocked websites, with context-aware messaging.
 
 ## Tech Stack
 
@@ -18,7 +20,8 @@ A digital wellbeing Chrome extension that helps you track browsing activity, set
 |-------|-----------|
 | Frontend | React 19, TypeScript |
 | Styling | Tailwind CSS v4 |
-| Icons | Tabler Icons |
+| Visualization | Recharts |
+| Icons | Tabler Icons, Lucide React |
 | Data | IndexedDB (offline-first, no server) |
 | Build | Vite 7 + [@crxjs/vite-plugin](https://github.com/nicedoc/crxjs) |
 | Linting | Biome.js |
@@ -74,9 +77,10 @@ pnpm build
     ├── screens/
     │   ├── Dashboard.tsx           # Main donut chart view
     │   ├── ActivityDetails.tsx     # Weekly chart + website list
+    │   ├── UsageAnalytics.tsx      # Monthly/Quarterly/Bi-annual trends
     │   ├── WebsiteTimers.tsx       # Per-site time limit management
     │   ├── ParentalControls.tsx    # Password-protected URL blocking
-    │   └── ScreenTimeReminders.tsx # Notification toggle & info
+    │   ├── ScreenTimeReminders.tsx # Notification toggle & info
     ├── components/
     │   ├── CircularChart.tsx    # SVG donut chart
     │   ├── WeeklyBarChart.tsx   # 7-day bar chart (Recharts)
@@ -101,7 +105,7 @@ pnpm build
 
 The **background service worker** listens to Chrome tab and window events (`tabs.onActivated`, `tabs.onUpdated`, `windows.onFocusChanged`, etc.) to track which website is active. It saves accumulated time to IndexedDB every 10 seconds and updates `declarativeNetRequest` rules to enforce timers and parental blocks.
 
-The **popup UI** communicates with the service worker via `chrome.runtime.sendMessage` to fetch stats, manage timers, and toggle settings. All data stays local in IndexedDB — nothing leaves the browser.
+The **popup UI** communicates with the service worker via `chrome.runtime.sendMessage` to fetch stats, manage timers, and toggle settings. All data stays local in IndexedDB, nothing leaves the browser.
 
 ## Scripts
 
