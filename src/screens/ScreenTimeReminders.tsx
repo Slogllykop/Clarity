@@ -152,14 +152,14 @@ export function ScreenTimeReminders({ onBack }: ScreenTimeRemindersProps) {
               <h4 className="text-sm font-semibold mb-3">How it works</h4>
               <div className="space-y-3">
                 <div className="flex items-start gap-3 p-3 bg-zinc-900 rounded-lg">
-                  <div className="w-2 h-2 bg-accent rounded-full mt-1.5 flex-shrink-0" />
+                  <div className="w-2 h-2 bg-accent rounded-full mt-1.5 shrink-0" />
                   <div className="text-sm text-gray-300">
                     Clarity automatically monitors your time spent on each website
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3 p-3 bg-zinc-900 rounded-lg">
-                  <div className="w-2 h-2 bg-accent rounded-full mt-1.5 flex-shrink-0" />
+                  <div className="w-2 h-2 bg-accent rounded-full mt-1.5 shrink-0" />
                   <div className="text-sm text-gray-300">
                     Reminders help you stay aware of your browsing habits
                   </div>
