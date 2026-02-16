@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Clarity",
-  "version": "4.0.0",
+  "version": "4.3.0",
   "description": "Digital wellbeing extension for browser - Track and manage your screen time",
   "icons": {
     "16": "icons/icon-16.png",
@@ -30,7 +30,8 @@
     "notifications",
     "webNavigation",
     "declarativeNetRequest",
-    "declarativeNetRequestWithHostAccess"
+    "declarativeNetRequestWithHostAccess",
+    "idle"
   ],
   "host_permissions": ["<all_urls>"],
   "declarative_net_request": {

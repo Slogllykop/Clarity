@@ -19,6 +19,10 @@ let currentSession: {
   sessionDate: null,
 };
 
+// Track idle state
+let isUserIdle = false;
+const IDLE_THRESHOLD = 15 * 60; // 15 minutes in seconds
+
 // Cache for timers to avoid frequent DB reads
 let timerCache: Map<string, WebsiteTimer> = new Map();
 
@@ -48,6 +52,9 @@ async function initialize() {
     when: getNextMidnight(),
     periodInMinutes: 24 * 60, // Daily
   });
+
+  // Set idle detection interval
+  chrome.idle.setDetectionInterval(IDLE_THRESHOLD);
 
   // Check for active tab on startup
   checkActiveTab();
@@ -143,6 +150,12 @@ async function updateBlockingRules() {
  * Save current session to database
  */
 async function saveCurrentSession() {
+  // Don't save if user is idle
+  if (isUserIdle) {
+    console.log("Clarity: User is idle, skipping save");
+    return;
+  }
+
   if (!currentSession.domain || !currentSession.startTime) {
     return;
   }
@@ -454,6 +467,34 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
   } else {
     // Window focused, check active tab
     await checkActiveTab();
+  }
+});
+
+// Idle state changed (user idle, locked, or active)
+chrome.idle.onStateChanged.addListener(async (newState) => {
+  console.log(`Clarity: Idle state changed to ${newState}`);
+
+  if (newState === "idle" || newState === "locked") {
+    // User is idle or locked - pause tracking
+    isUserIdle = true;
+    console.log("Clarity: User is idle/locked, pausing tracking");
+
+    // Save current session before pausing
+    await saveCurrentSession();
+
+    // Reset start time so we don't accumulate time while idle
+    if (currentSession.domain && currentSession.startTime) {
+      currentSession.startTime = Date.now();
+    }
+  } else if (newState === "active") {
+    // User is active again - resume tracking
+    isUserIdle = false;
+    console.log("Clarity: User is active, resuming tracking");
+
+    // Reset start time to now (don't count idle time)
+    if (currentSession.domain) {
+      currentSession.startTime = Date.now();
+    }
   }
 });
 

@@ -1,0 +1,171 @@
+diff --git a/manifest.json b/manifest.json
+index ee85510..0782c40 100644
+--- a/manifest.json
++++ b/manifest.json
+@@ -1,7 +1,7 @@
+ {
+   "manifest_version": 3,
+   "name": "Clarity",
+-  "version": "4.0.0",
++  "version": "4.3.0",
+   "description": "Digital wellbeing extension for browser - Track and manage your screen time",
+   "icons": {
+     "16": "icons/icon-16.png",
+@@ -30,7 +30,8 @@
+     "notifications",
+     "webNavigation",
+     "declarativeNetRequest",
+-    "declarativeNetRequestWithHostAccess"
++    "declarativeNetRequestWithHostAccess",
++    "idle"
+   ],
+   "host_permissions": ["<all_urls>"],
+   "declarative_net_request": {
+diff --git a/package.json b/package.json
+index ce0261a..fd82ece 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "clarity",
+   "private": true,
+-  "version": "4.0.0",
++  "version": "4.3.0",
+   "type": "module",
+   "scripts": {
+     "dev": "vite",
+diff --git a/src/background/service-worker.ts b/src/background/service-worker.ts
+index 5c91a82..3afe8d7 100644
+--- a/src/background/service-worker.ts
++++ b/src/background/service-worker.ts
+@@ -19,6 +19,10 @@ let currentSession: {
+   sessionDate: null,
+ };
+ 
++// Track idle state
++let isUserIdle = false;
++const IDLE_THRESHOLD = 15 * 60; // 15 minutes in seconds
++
+ // Cache for timers to avoid frequent DB reads
+ let timerCache: Map<string, WebsiteTimer> = new Map();
+ 
+@@ -49,6 +53,9 @@ async function initialize() {
+     periodInMinutes: 24 * 60, // Daily
+   });
+ 
++  // Set idle detection interval
++  chrome.idle.setDetectionInterval(IDLE_THRESHOLD);
++
+   // Check for active tab on startup
+   checkActiveTab();
+ }
+@@ -143,6 +150,12 @@ async function updateBlockingRules() {
+  * Save current session to database
+  */
+ async function saveCurrentSession() {
++  // Don't save if user is idle
++  if (isUserIdle) {
++    console.log("Clarity: User is idle, skipping save");
++    return;
++  }
++
+   if (!currentSession.domain || !currentSession.startTime) {
+     return;
+   }
+@@ -457,6 +470,34 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
+   }
+ });
+ 
++// Idle state changed (user idle, locked, or active)
++chrome.idle.onStateChanged.addListener(async (newState) => {
++  console.log(`Clarity: Idle state changed to ${newState}`);
++
++  if (newState === "idle" || newState === "locked") {
++    // User is idle or locked - pause tracking
++    isUserIdle = true;
++    console.log("Clarity: User is idle/locked, pausing tracking");
++
++    // Save current session before pausing
++    await saveCurrentSession();
++
++    // Reset start time so we don't accumulate time while idle
++    if (currentSession.domain && currentSession.startTime) {
++      currentSession.startTime = Date.now();
++    }
++  } else if (newState === "active") {
++    // User is active again - resume tracking
++    isUserIdle = false;
++    console.log("Clarity: User is active, resuming tracking");
++
++    // Reset start time to now (don't count idle time)
++    if (currentSession.domain) {
++      currentSession.startTime = Date.now();
++    }
++  }
++});
++
+ // Alarm listener for periodic saves and notifications
+ chrome.alarms.onAlarm.addListener(async (alarm) => {
+   if (alarm.name === "saveActivity") {
+diff --git a/src/components/ui/select.tsx b/src/components/ui/select.tsx
+index 1968803..73f7a46 100644
+--- a/src/components/ui/select.tsx
++++ b/src/components/ui/select.tsx
+@@ -1,6 +1,6 @@
+-import * as React from "react";
+ import * as SelectPrimitive from "@radix-ui/react-select";
+ import { Check, ChevronDown, ChevronUp } from "lucide-react";
++import * as React from "react";
+ 
+ import { cn } from "@/lib/utils";
+ 
+@@ -66,7 +66,7 @@ const SelectContent = React.forwardRef<
+     <SelectPrimitive.Content
+       ref={ref}
+       className={cn(
+-        "relative z-50 max-h-[--radix-select-content-available-height] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-select-content-transform-origin]",
++        "relative z-50 max-h-[--radix-select-content-available-height] min-w-32 overflow-y-auto overflow-x-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-select-content-transform-origin]",
+         position === "popper" &&
+           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+         className,
+diff --git a/src/screens/UsageAnalytics.tsx b/src/screens/UsageAnalytics.tsx
+index 8db3734..f54200a 100644
+--- a/src/screens/UsageAnalytics.tsx
++++ b/src/screens/UsageAnalytics.tsx
+@@ -1,5 +1,5 @@
+ import { IconChevronLeft } from "@tabler/icons-react";
+-import { useMemo, useState } from "react";
++import { useEffect, useMemo, useState } from "react";
+ import {
+   Bar,
+   BarChart,
+@@ -21,7 +21,6 @@ import {
+ } from "@/components/ui/select";
+ import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
+ import { db } from "@/db/database";
+-import { useEffect } from "react";
+ import type { DailyActivity } from "@/types";
+ 
+ // ─── Types & Constants ───────────────────────────────────────────────
+@@ -264,7 +263,7 @@ function MonthlyView() {
+                   }}
+                   formatter={(value, _name, _item) => (
+                     <>
+-                      <div className="h-2 w-2 shrink-0 rounded-full bg-[#10b981]" />
++                      <div className="h-2 w-2 shrink-0 rounded-full bg-accent" />
+                       <div className="flex flex-1 justify-between leading-none items-center gap-4">
+                         <span className="text-muted-foreground">Screen Time</span>
+                         <span className="font-mono font-medium tabular-nums text-foreground">
+diff --git a/src/screens/WebsiteTimers.tsx b/src/screens/WebsiteTimers.tsx
+index 4a4b032..24b354d 100644
+--- a/src/screens/WebsiteTimers.tsx
++++ b/src/screens/WebsiteTimers.tsx
+@@ -132,7 +132,7 @@ export function WebsiteTimers({ onBack }: WebsiteTimersProps) {
+                   <div key={website.domain} className="pb-4">
+                     <div className="flex items-start gap-3">
+                       {/* Favicon */}
+-                      <div className="w-10 h-10 flex items-center justify-center bg-zinc-800 rounded-full flex-shrink-0 mt-1">
++                      <div className="w-10 h-10 flex items-center justify-center bg-zinc-800 rounded-full shrink-0 mt-1">
+                         {website.faviconUrl ? (
+                           <img
+                             src={website.faviconUrl}

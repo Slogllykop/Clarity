@@ -132,7 +132,7 @@ export function WebsiteTimers({ onBack }: WebsiteTimersProps) {
                   <div key={website.domain} className="pb-4">
                     <div className="flex items-start gap-3">
                       {/* Favicon */}
-                      <div className="w-10 h-10 flex items-center justify-center bg-zinc-800 rounded-full flex-shrink-0 mt-1">
+                      <div className="w-10 h-10 flex items-center justify-center bg-zinc-800 rounded-full shrink-0 mt-1">
                         {website.faviconUrl ? (
                           <img
                             src={website.faviconUrl}

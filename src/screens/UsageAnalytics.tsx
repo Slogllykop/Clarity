@@ -1,5 +1,5 @@
 import { IconChevronLeft } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 import { db } from "@/db/database";
-import { useEffect } from "react";
 import type { DailyActivity } from "@/types";
 
 // ─── Types & Constants ───────────────────────────────────────────────
@@ -264,7 +263,7 @@ function MonthlyView() {
                   }}
                   formatter={(value, _name, _item) => (
                     <>
-                      <div className="h-2 w-2 shrink-0 rounded-full bg-[#10b981]" />
+                      <div className="h-2 w-2 shrink-0 rounded-full bg-accent" />
                       <div className="flex flex-1 justify-between leading-none items-center gap-4">
                         <span className="text-muted-foreground">Screen Time</span>
                         <span className="font-mono font-medium tabular-nums text-foreground">
