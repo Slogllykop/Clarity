@@ -27,7 +27,41 @@ const IDLE_THRESHOLD = 15 * 60; // 15 minutes in seconds
 let timerCache: Map<string, WebsiteTimer> = new Map();
 
 // Track notifications sent per domain to avoid duplicates
-const notificationTracker: Map<string, Set<number>> = new Map(); // domain -> Set of threshold values already notified
+// Track notification state in local storage to persist across service worker restarts
+interface NotificationState {
+  date: string;
+  sent: Record<string, number[]>; // domain -> array of sent thresholds
+}
+
+const NOTIFICATION_STATE_KEY = "clarity_notification_state";
+
+/**
+ * Get notification state from local storage
+ */
+async function getNotificationState(): Promise<NotificationState> {
+  const result = await chrome.storage.local.get(NOTIFICATION_STATE_KEY);
+  const state = result[NOTIFICATION_STATE_KEY] as NotificationState | undefined;
+  const today = getTodayDate();
+
+  if (!state || state.date !== today) {
+    // Reset or initialize if date changed or no state
+    const newState: NotificationState = {
+      date: today,
+      sent: {},
+    };
+    await saveNotificationState(newState);
+    return newState;
+  }
+
+  return state;
+}
+
+/**
+ * Save notification state to local storage
+ */
+async function saveNotificationState(state: NotificationState): Promise<void> {
+  await chrome.storage.local.set({ [NOTIFICATION_STATE_KEY]: state });
+}
 
 /**
  * Initialize the service worker
@@ -307,25 +341,42 @@ async function checkAndSendNotifications() {
     const activities = await db.getWebsiteActivitiesForDate(today);
     const thresholds = settings.reminderThresholds; // [1800, 3600, 7200] = [30min, 1hr, 2hr]
 
+    // Load notification state
+    const notificationState = await getNotificationState();
+    let stateChanged = false;
+
     // Check each website activity
     for (const activity of activities) {
       const domain = activity.domain;
       const timeSpent = activity.timeSpent;
 
-      // Get or create notification tracker for this domain
-      if (!notificationTracker.has(domain)) {
-        notificationTracker.set(domain, new Set());
-      }
-      const sentThresholds = notificationTracker.get(domain)!;
+      // Get sent thresholds for this domain
+      const sentThresholds = new Set(notificationState.sent[domain] || []);
 
-      // Check each threshold
-      for (const threshold of thresholds) {
-        // If time spent exceeds threshold and we haven't notified yet
-        if (timeSpent >= threshold && !sentThresholds.has(threshold)) {
-          await sendScreenTimeNotification(domain, timeSpent, threshold);
-          sentThresholds.add(threshold);
-        }
+      // Find all crossed thresholds
+      const crossedThresholds = thresholds.filter((t) => timeSpent >= t);
+
+      // Identify which crossed thresholds haven't been sent yet
+      const unsentCrossedThresholds = crossedThresholds.filter((t) => !sentThresholds.has(t));
+
+      if (unsentCrossedThresholds.length > 0) {
+        // Send notification for the HIGHEST crossed threshold only
+        // This prevents spamming if multiple thresholds are crossed at once
+        const highestUnsent = Math.max(...unsentCrossedThresholds);
+
+        await sendScreenTimeNotification(domain, timeSpent, highestUnsent);
+
+        // Mark ALL crossed thresholds as sent (including lower ones we skipped)
+        // This ensures if we jump to 1h, we don't later get a 30m notification
+        const newSentList = Array.from(new Set([...sentThresholds, ...crossedThresholds]));
+        notificationState.sent[domain] = newSentList;
+        stateChanged = true;
       }
+    }
+
+    // Save state if changed
+    if (stateChanged) {
+      await saveNotificationState(notificationState);
     }
   } catch (error) {
     console.error("Clarity: Error checking notifications", error);
@@ -364,7 +415,12 @@ async function sendScreenTimeNotification(domain: string, timeSpent: number, thr
  * Reset notification tracker daily
  */
 async function resetNotificationTracker() {
-  notificationTracker.clear();
+  const today = getTodayDate();
+  const newState: NotificationState = {
+    date: today,
+    sent: {},
+  };
+  await saveNotificationState(newState);
   console.log("Clarity: Reset notification tracker for new day");
 }
 

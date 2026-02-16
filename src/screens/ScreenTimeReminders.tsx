@@ -1,5 +1,6 @@
 import { IconBell, IconBellOff, IconChevronLeft } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 import type { Settings } from "@/types";
@@ -55,7 +56,7 @@ export function ScreenTimeReminders({ onBack }: ScreenTimeRemindersProps) {
             payload: { reminderEnabled: false },
           });
           setEnabled(false);
-          alert("Notification permission is required for screen time reminders");
+          toast.error("Notification permission is required for screen time reminders");
         }
       }
     } catch (error) {

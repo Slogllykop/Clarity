@@ -7,6 +7,7 @@ import {
   IconUpload,
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { CircularChart } from "@/components/CircularChart";
 import { FeatureCard } from "@/components/FeatureCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -91,9 +92,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       URL.revokeObjectURL(url);
 
       console.log("Export successful");
+      toast.success("Data exported successfully!");
     } catch (error) {
       console.error("Export failed:", error);
-      alert("Failed to export data. Please try again.");
+      toast.error("Failed to export data. Please try again.");
     } finally {
       setExporting(false);
     }
@@ -124,11 +126,13 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       // Notify background worker to reload
       await chrome.runtime.sendMessage({ type: "RELOAD_DATA" });
 
-      alert("Data imported successfully!");
+      toast.success("Data imported successfully!");
       console.log("Import successful");
     } catch (error) {
       console.error("Import failed:", error);
-      alert(`Failed to import data: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Failed to import data: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setImporting(false);
       // Reset file input

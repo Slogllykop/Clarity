@@ -1,3 +1,4 @@
+import { Toaster } from "@/components/ui/sonner";
 import { EXTENSION_MAX_HEIGHT, EXTENSION_WIDTH } from "@/constants/layout";
 import { SCREENS, useScreenNavigation } from "@/hooks/useScreenNavigation";
 import { ActivityDetails } from "@/screens/ActivityDetails";
@@ -40,6 +41,7 @@ function App() {
       }}
     >
       {renderScreen()}
+      <Toaster position="bottom-center" richColors />
     </div>
   );
 }
