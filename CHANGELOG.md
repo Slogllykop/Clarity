@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.5.0](https://github.com/Slogllykop/Clarity/compare/v4.4.0...v4.5.0) (2026-02-16)
+
+
+### Features
+
+* enhance notifications persistence and UI feedback ([bbee86a](https://github.com/Slogllykop/Clarity/commit/bbee86a4efcd4d061de030ea0a4805c4934466f7))
+
 ## 4.4.0 (2026-02-16)
 
 
