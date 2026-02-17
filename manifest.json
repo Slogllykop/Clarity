@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Clarity",
-  "version": "4.7.0",
-  "description": "Digital wellbeing extension for browser - Track and manage your screen time",
+  "name": "Clarity: Master Your Time",
+  "version": "4.7.1",
+  "description": "Take control of your focus. Track browsing habits, set smart time limits, and block distractions to reclaim your productivity.",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
