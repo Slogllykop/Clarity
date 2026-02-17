@@ -106,10 +106,7 @@ export function UsageAnalytics({ onBack }: UsageAnalyticsProps) {
       {/* Header */}
       <div className="bg-black border-b border-zinc-800 p-4">
         <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="text-gray-400 hover:text-white transition-colors cursor-pointer"
-          >
+          <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
             <IconChevronLeft size={24} />
           </button>
           <div className="flex-1">
@@ -133,7 +130,7 @@ export function UsageAnalytics({ onBack }: UsageAnalyticsProps) {
               <button
                 key={key}
                 onClick={() => setPeriod(key)}
-                className={`flex-1 py-2 px-3 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+                className={`flex-1 py-2 px-3 rounded-full text-sm font-medium transition-colors ${
                   period === key
                     ? "bg-accent text-black"
                     : "bg-zinc-900 text-gray-400 hover:bg-zinc-800 border border-zinc-800"

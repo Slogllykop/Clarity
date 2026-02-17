@@ -133,7 +133,7 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
             <button
               onClick={() => navigateDay("next")}
               disabled={selectedDate >= getTodayDate()}
-              className="p-2 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed!"
             >
               <IconChevronRight size={20} />
             </button>

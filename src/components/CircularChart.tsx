@@ -1,3 +1,4 @@
+import { IconChevronRight } from "@tabler/icons-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Label, Pie, PieChart } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
@@ -127,9 +128,10 @@ export function CircularChart({ websites, totalTime, onClick }: CircularChartPro
 
   return (
     <button
-      className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-lg w-full bg-transparent border-none p-0"
+      className="flex flex-col items-center gap-2 hover:opacity-90 transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-lg w-full bg-transparent border-none p-0"
       onClick={onClick}
       type="button"
+      aria-label="View detailed activity breakdown"
     >
       <div className="h-[320px] w-[340px]">
         <ChartContainer config={chartConfig} className="h-full w-full">
@@ -146,32 +148,41 @@ export function CircularChart({ websites, totalTime, onClick }: CircularChartPro
               onAnimationEnd={handleAnimationEnd}
               label={renderLabel}
               labelLine={false}
+              className="cursor-pointer"
             >
               <Label
                 content={({ viewBox }) => {
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                     return (
-                      <text
-                        x={viewBox.cx}
-                        y={viewBox.cy}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                      >
-                        <tspan
+                      <g>
+                        <text
                           x={viewBox.cx}
                           y={viewBox.cy}
-                          className="fill-white text-3xl font-bold"
+                          textAnchor="middle"
+                          dominantBaseline="middle"
                         >
-                          {formatTime(totalTime, true)}
-                        </tspan>
-                        <tspan
-                          x={viewBox.cx}
-                          y={(viewBox.cy || 0) + 20}
-                          className="fill-gray-400 text-xs"
+                          <tspan
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            className="fill-white text-3xl font-bold"
+                          >
+                            {formatTime(totalTime, true)}
+                          </tspan>
+                          <tspan
+                            x={viewBox.cx}
+                            y={(viewBox.cy || 0) + 20}
+                            className="fill-gray-400 text-xs"
+                          >
+                            Today
+                          </tspan>
+                        </text>
+                        {/* Clickable indicator icon */}
+                        <g
+                          transform={`translate(${(viewBox.cx || 0) - 9}, ${(viewBox.cy || 0) + 35})`}
                         >
-                          Today
-                        </tspan>
-                      </text>
+                          <IconChevronRight size={18} className="animate-pulse text-accent" />
+                        </g>
+                      </g>
                     );
                   }
                 }}

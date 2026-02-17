@@ -28,6 +28,10 @@ body {
   min-height: 100vh;
 }
 
+button {
+  cursor: pointer;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
