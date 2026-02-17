@@ -8,7 +8,7 @@ A digital wellbeing Chrome extension that helps you track browsing activity, set
 - **Dashboard**: A donut chart showing today's browsing distribution at a glance, with a live website visit counter.
 - **Usage Analytics**: Analyze long-term browsing trends with monthly, quarterly, and bi-annual charts.
 - **Activity Details**: Interactive weekly bar chart with day-by-day navigation and a ranked list of all visited websites.
-- **Website Timers**: Set daily time limits for specific websites. When exceeded, the site is blocked for the rest of the day (resets at midnight).
+- **Website Timers**: Set daily time limits for specific websites. When exceeded, the site is blocked for the rest of the day (resets at midnight). Includes search and filtering for easy management.
 - **Parental Controls**: Password-protected URL blocking with security question recovery. Uses SHA-256 hashing via the Web Crypto API.
 - **Screen Time Reminders**: Browser notifications at 30 min, 1 hr, and 2 hr thresholds per website.
 - **Data Management**: Backup all your tracking data to a JSON file and restore it anytime.
@@ -20,6 +20,7 @@ A digital wellbeing Chrome extension that helps you track browsing activity, set
 |-------|-----------|
 | Frontend | React 19, TypeScript |
 | Styling | Tailwind CSS v4 |
+| UI Components | Radix UI, Sonner |
 | Visualization | Recharts |
 | Icons | Tabler Icons, Lucide React |
 | Data | IndexedDB (offline-first, no server) |
@@ -67,45 +68,34 @@ pnpm build
 ├── rules.json              # Declarative net request rules
 ├── vite.config.ts          # Vite + CRXJS + Tailwind config
 ├── biome.json              # Linter & formatter config
-└── src/
-    ├── main.tsx             # Popup React root
-    ├── App.tsx              # Screen router
-    ├── blocked.tsx          # Blocked page React root
-    ├── index.css            # Global styles & Tailwind theme
-    ├── background/
-    │   └── service-worker.ts   # Activity tracking, timers, blocking
-    ├── screens/
-    │   ├── Dashboard.tsx           # Main donut chart view
-    │   ├── ActivityDetails.tsx     # Weekly chart + website list
-    │   ├── UsageAnalytics.tsx      # Monthly/Quarterly/Bi-annual trends
-    │   ├── WebsiteTimers.tsx       # Per-site time limit management
-    │   ├── ParentalControls.tsx    # Password-protected URL blocking
-    │   ├── ScreenTimeReminders.tsx # Notification toggle & info
-    ├── components/
-    │   ├── CircularChart.tsx    # SVG donut chart
-    │   ├── WeeklyBarChart.tsx   # 7-day bar chart (Recharts)
-    │   ├── WebsiteList.tsx      # Ranked website list w/ favicons
-    │   ├── FeatureCard.tsx      # Dashboard navigation cards
-    │   └── ui/                  # Radix-based shared UI primitives
-    ├── db/
-    │   ├── database.ts      # IndexedDB wrapper (ClarityDatabase)
-    │   └── utils.ts         # Time formatting, date helpers, hashing
-    ├── hooks/
-    │   └── useScreenNavigation.ts  # Simple state-based routing
-    ├── types/
-    │   └── index.ts         # All TypeScript interfaces
-    ├── constants/
-    │   └── layout.ts        # Extension dimensions (400×600)
-    └── lib/
-        ├── utils.ts         # cn() class merge utility
-        └── domain-utils.ts  # Domain display name helpers
+├── src/
+│   ├── main.tsx           # Extension entry point
+│   ├── App.tsx            # Root component & screen router
+│   ├── blocked.tsx        # Blocked page entry point
+│   ├── index.css          # Global styles & Tailwind directives
+│   ├── background/
+│   │   └── service-worker.ts # Background logic: tracking, timers, blocking
+│   ├── features/          # Feature-based modules
+│   │   ├── activity/      # Activity details & weekly stats
+│   │   ├── analytics/     # Long-term usage trends
+│   │   ├── dashboard/     # Main overview & circular chart
+│   │   ├── parental-controls/ # Password-protected blocking
+│   │   ├── reminders/     # Screen time notifications
+│   │   └── timers/        # Website time limit management
+│   ├── components/
+│   │   └── ui/            # Shared UI primitives (Radix, Sonner)
+│   ├── hooks/             # Custom React hooks (navigation, etc.)
+│   ├── db/                # IndexedDB layer & database utilities
+│   ├── lib/               # Utility functions & helpers
+│   ├── types/             # TypeScript definitions
+│   └── constants/         # App-wide constants
 ```
 
 ## How It Works
 
-The **background service worker** listens to Chrome tab and window events (`tabs.onActivated`, `tabs.onUpdated`, `windows.onFocusChanged`, etc.) to track which website is active. It saves accumulated time to IndexedDB every 10 seconds and updates `declarativeNetRequest` rules to enforce timers and parental blocks.
+The **background service worker** listens to Chrome tab and window events (`tabs.onActivated`, `tabs.onUpdated`, `windows.onFocusChanged`, `idle.onStateChanged`, etc.) to track which website is active. It saves accumulated time to IndexedDB every 10 seconds and updates `declarativeNetRequest` rules to enforce timers and parental blocks.
 
-The **popup UI** communicates with the service worker via `chrome.runtime.sendMessage` to fetch stats, manage timers, and toggle settings. All data stays local in IndexedDB, nothing leaves the browser.
+The **popup UI** communicates with the service worker via `chrome.runtime.sendMessage` to fetch stats, manage timers, and toggle settings. All data stays local in IndexedDB, ensuring privacy and offline-first functionality.
 
 ## Scripts
 
@@ -116,6 +106,7 @@ The **popup UI** communicates with the service worker via `chrome.runtime.sendMe
 | `pnpm lint` | Run Biome linter |
 | `pnpm lint:fix` | Auto-fix lint issues |
 | `pnpm format` | Format code with Biome |
+| `pnpm release` | Create a new release with standard-version |
 
 ## License
 
