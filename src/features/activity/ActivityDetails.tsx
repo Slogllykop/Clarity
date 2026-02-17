@@ -1,8 +1,6 @@
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { WebsiteList } from "@/components/WebsiteList";
-import { WeeklyBarChart } from "@/components/WeeklyBarChart";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 import {
   formatDate,
@@ -13,6 +11,8 @@ import {
   getWeekRange,
 } from "@/db/utils";
 import type { WebsiteActivity, WeeklyStats } from "@/types";
+import { WebsiteList } from "./components/WebsiteList";
+import { WeeklyBarChart } from "./components/WeeklyBarChart";
 
 interface ActivityDetailsProps {
   onBack: () => void;

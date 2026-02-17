@@ -8,14 +8,14 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { CircularChart } from "@/components/CircularChart";
-import { FeatureCard } from "@/components/FeatureCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 import { db } from "@/db/database";
 import { calculatePercentages, getTodayDate, groupWebsitesByOthers } from "@/db/utils";
 import type { ScreenName } from "@/hooks/useScreenNavigation";
 import type { DailyActivity, WebsiteActivity } from "@/types";
+import { CircularChart } from "./components/CircularChart";
+import { FeatureCard } from "./components/FeatureCard";
 
 interface DashboardProps {
   onNavigate: (screen: ScreenName) => void;

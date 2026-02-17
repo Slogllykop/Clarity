@@ -1,12 +1,35 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { EXTENSION_MAX_HEIGHT, EXTENSION_WIDTH } from "@/constants/layout";
 import { SCREENS, useScreenNavigation } from "@/hooks/useScreenNavigation";
-import { ActivityDetails } from "@/screens/ActivityDetails";
-import { Dashboard } from "@/screens/Dashboard";
-import { ParentalControls } from "@/screens/ParentalControls";
-import { ScreenTimeReminders } from "@/screens/ScreenTimeReminders";
-import { UsageAnalytics } from "@/screens/UsageAnalytics";
-import { WebsiteTimers } from "@/screens/WebsiteTimers";
+
+// Lazy load features
+const Dashboard = lazy(() =>
+  import("@/features/dashboard/Dashboard").then((module) => ({ default: module.Dashboard })),
+);
+const ActivityDetails = lazy(() =>
+  import("@/features/activity/ActivityDetails").then((module) => ({
+    default: module.ActivityDetails,
+  })),
+);
+const WebsiteTimers = lazy(() =>
+  import("@/features/timers/WebsiteTimers").then((module) => ({ default: module.WebsiteTimers })),
+);
+const ParentalControls = lazy(() =>
+  import("@/features/parental-controls/ParentalControls").then((module) => ({
+    default: module.ParentalControls,
+  })),
+);
+const ScreenTimeReminders = lazy(() =>
+  import("@/features/reminders/ScreenTimeReminders").then((module) => ({
+    default: module.ScreenTimeReminders,
+  })),
+);
+const UsageAnalytics = lazy(() =>
+  import("@/features/analytics/UsageAnalytics").then((module) => ({
+    default: module.UsageAnalytics,
+  })),
+);
 
 function App() {
   const { currentScreen, navigate, goToDashboard } = useScreenNavigation();
@@ -40,7 +63,13 @@ function App() {
         overflow: "hidden",
       }}
     >
-      {renderScreen()}
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center h-full text-white">Loading...</div>
+        }
+      >
+        {renderScreen()}
+      </Suspense>
       <Toaster position="bottom-center" richColors />
     </div>
   );
