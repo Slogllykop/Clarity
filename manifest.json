@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Clarity",
-  "version": "4.6.0",
+  "version": "4.7.0",
   "description": "Digital wellbeing extension for browser - Track and manage your screen time",
   "icons": {
     "16": "icons/icon-16.png",
@@ -22,20 +22,8 @@
     "service_worker": "src/background/service-worker.ts",
     "type": "module"
   },
-  "permissions": [
-    "tabs",
-    "activeTab",
-    "storage",
-    "alarms",
-    "notifications",
-    "webNavigation",
-    "declarativeNetRequest",
-    "declarativeNetRequestWithHostAccess",
-    "idle"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
+  "permissions": ["tabs", "storage", "alarms", "notifications", "declarativeNetRequest", "idle"],
+  "host_permissions": ["<all_urls>"],
   "declarative_net_request": {
     "rule_resources": [
       {
