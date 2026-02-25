@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Clarity: Master Your Time",
-  "version": "4.7.1",
+  "version": "4.8.0",
   "description": "Take control of your focus. Track browsing habits, set smart time limits, and block distractions to reclaim your productivity.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -22,8 +22,17 @@
     "service_worker": "src/background/service-worker.ts",
     "type": "module"
   },
-  "permissions": ["tabs", "storage", "alarms", "notifications", "declarativeNetRequest", "idle"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms",
+    "notifications",
+    "declarativeNetRequest",
+    "idle"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "declarative_net_request": {
     "rule_resources": [
       {

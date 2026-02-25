@@ -140,8 +140,8 @@ export function CircularChart({ websites, totalTime, onClick }: CircularChartPro
               data={chartData}
               dataKey="time"
               nameKey="domain"
-              innerRadius={80}
-              outerRadius={100}
+              innerRadius={70}
+              outerRadius={85}
               strokeWidth={2}
               stroke="#000000"
               isAnimationActive={isAnimationActive}
@@ -178,9 +178,16 @@ export function CircularChart({ websites, totalTime, onClick }: CircularChartPro
                         </text>
                         {/* Clickable indicator icon */}
                         <g
-                          transform={`translate(${(viewBox.cx || 0) - 9}, ${(viewBox.cy || 0) + 35})`}
+                          transform={`translate(${(viewBox.cx || 0) - 18}, ${(viewBox.cy || 0) + 30})`}
                         >
-                          <IconChevronRight size={18} className="animate-pulse text-accent" />
+                          <text y={13} x={0} className="animate-pulse fill-accent">
+                            View
+                          </text>
+                          <IconChevronRight
+                            x={25}
+                            size={18}
+                            className="animate-pulse text-accent"
+                          />
                         </g>
                       </g>
                     );

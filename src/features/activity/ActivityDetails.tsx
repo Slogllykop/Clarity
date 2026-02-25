@@ -23,6 +23,7 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
   const [weeklyStats, setWeeklyStats] = useState<WeeklyStats[]>([]);
   const [websites, setWebsites] = useState<WebsiteActivity[]>([]);
   const [totalTime, setTotalTime] = useState(0);
+  const [yesterdayTotalTime, setYesterdayTotalTime] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const loadWeeklyStats = async () => {
@@ -52,9 +53,44 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
       const websiteList = response.websites || [];
       setWebsites(websiteList);
       setTotalTime(websiteList.reduce((sum: number, w: WebsiteActivity) => sum + w.timeSpent, 0));
+
+      const current = new Date(date);
+      current.setDate(current.getDate() - 1);
+      const yesterdayDate = current.toISOString().split("T")[0];
+
+      const yesterdayResponse = await chrome.runtime.sendMessage({
+        type: "GET_WEBSITE_LIST",
+        payload: { date: yesterdayDate },
+      });
+      const yesterdayList = yesterdayResponse.websites || [];
+      setYesterdayTotalTime(
+        yesterdayList.reduce((sum: number, w: WebsiteActivity) => sum + w.timeSpent, 0),
+      );
     } catch (error) {
       console.error("Error loading websites:", error);
     }
+  };
+
+  const renderComparisonText = () => {
+    if (yesterdayTotalTime === 0) return null;
+
+    const diff = totalTime - yesterdayTotalTime;
+    const percentage = Math.abs((diff / yesterdayTotalTime) * 100).toFixed(1);
+
+    if (diff > 0) {
+      return (
+        <div className="text-center -mt-2 mb-[-12px] text-sm text-red-500 font-medium tracking-wide">
+          {percentage}% more than yesterday
+        </div>
+      );
+    } else if (diff < 0) {
+      return (
+        <div className="text-center -mt-2 mb-[-12px] text-sm text-accent font-medium tracking-wide">
+          {percentage}% less than yesterday
+        </div>
+      );
+    }
+    return null;
   };
 
   useEffect(() => {
@@ -113,6 +149,9 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
           />
+
+          {/* Comparison Text */}
+          {renderComparisonText()}
 
           {/* Day Navigation */}
           <div className="flex items-center justify-between mt-6">
