@@ -77,16 +77,19 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
     const diff = totalTime - yesterdayTotalTime;
     const percentage = Math.abs((diff / yesterdayTotalTime) * 100).toFixed(1);
 
+    const isToday = selectedDate === getTodayDate();
+    const comparisonDayText = isToday ? "yesterday" : "previous day";
+
     if (diff > 0) {
       return (
         <div className="text-center -mt-2 mb-[-12px] text-sm text-red-500 font-medium tracking-wide">
-          {percentage}% more than yesterday
+          {percentage}% more than {comparisonDayText}
         </div>
       );
     } else if (diff < 0) {
       return (
         <div className="text-center -mt-2 mb-[-12px] text-sm text-accent font-medium tracking-wide">
-          {percentage}% less than yesterday
+          {percentage}% less than {comparisonDayText}
         </div>
       );
     }

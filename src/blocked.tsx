@@ -77,7 +77,7 @@ function BlockedPage() {
         {/* Info */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
           <div className="flex items-start gap-3 text-left">
-            <IconBan size={24} className="text-red-400 flex-shrink-0 mt-1" />
+            <IconBan size={24} className="text-red-400 shrink-0 mt-1" />
             <div className="flex-1">
               <p className="text-sm text-gray-300">
                 {reason === "timer"
