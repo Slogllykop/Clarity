@@ -8,6 +8,7 @@ interface WeeklyBarChartProps {
   data: WeeklyStats[];
   selectedDate: string;
   onDateSelect: (date: string) => void;
+  earliestDate?: string | null;
 }
 
 interface ChartDataPoint {
@@ -16,6 +17,7 @@ interface ChartDataPoint {
   time: number;
   isSelected: boolean;
   isFuture: boolean;
+  isDisabled: boolean;
 }
 
 interface CustomBarProps {
@@ -34,12 +36,12 @@ const CustomBar = (props: CustomBarProps) => {
 
   const fill = payload.isSelected
     ? "#10b981" // accent color
-    : payload.isFuture
+    : payload.isDisabled
       ? "#27272a" // zinc-800
       : "#3f3f46"; // zinc-700
 
-  const opacity = payload.isFuture ? 0.5 : 1;
-  const cursor = payload.isFuture ? "not-allowed" : "pointer";
+  const opacity = payload.isDisabled ? 0.5 : 1;
+  const cursor = payload.isDisabled ? "not-allowed" : "pointer";
 
   return (
     <Rectangle
@@ -52,7 +54,7 @@ const CustomBar = (props: CustomBarProps) => {
       radius={[4, 4, 0, 0]}
       style={{ cursor }}
       onClick={() => {
-        if (!payload.isFuture) {
+        if (!payload.isDisabled) {
           onDateSelect(payload.date);
         }
       }}
@@ -60,16 +62,26 @@ const CustomBar = (props: CustomBarProps) => {
   );
 };
 
-export function WeeklyBarChart({ data, selectedDate, onDateSelect }: WeeklyBarChartProps) {
+export function WeeklyBarChart({
+  data,
+  selectedDate,
+  onDateSelect,
+  earliestDate,
+}: WeeklyBarChartProps) {
   const chartData = useMemo(() => {
-    return data.map((stat) => ({
-      day: stat.day,
-      date: stat.date,
-      time: stat.totalTime / 3600, // Convert to hours for display
-      isSelected: stat.date === selectedDate,
-      isFuture: stat.date > getTodayDate(),
-    }));
-  }, [data, selectedDate]);
+    return data.map((stat) => {
+      const isFuture = stat.date > getTodayDate();
+      const isPast = earliestDate ? stat.date < earliestDate : false;
+      return {
+        day: stat.day,
+        date: stat.date,
+        time: stat.totalTime / 3600, // Convert to hours for display
+        isSelected: stat.date === selectedDate,
+        isFuture,
+        isDisabled: isFuture || isPast,
+      };
+    });
+  }, [data, selectedDate, earliestDate]);
 
   // Compute integer Y-axis ticks based on max recorded time
   const { yTicks, yMax } = useMemo(() => {
@@ -97,8 +109,8 @@ export function WeeklyBarChart({ data, selectedDate, onDateSelect }: WeeklyBarCh
             axisLine={false}
             tick={({ x, y, payload }) => {
               const item = chartData.find((d) => d.day === payload.value);
-              const isFuture = item?.isFuture ?? false;
-              const cursor = isFuture ? "not-allowed" : "pointer";
+              const isDisabled = item?.isDisabled ?? false;
+              const cursor = isDisabled ? "not-allowed" : "pointer";
 
               return (
                 <text
@@ -110,7 +122,7 @@ export function WeeklyBarChart({ data, selectedDate, onDateSelect }: WeeklyBarCh
                   }`}
                   style={{ cursor }}
                   onClick={() => {
-                    if (item && !isFuture) {
+                    if (item && !isDisabled) {
                       onDateSelect(item.date);
                     }
                   }}

@@ -149,6 +149,23 @@ class ClarityDatabase {
     });
   }
 
+  async getEarliestActivityDate(): Promise<string | null> {
+    const store = await this.getTransaction(STORES.DAILY_ACTIVITY);
+    const index = store.index("date");
+    return new Promise((resolve, reject) => {
+      const request = index.openCursor();
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (cursor) {
+          resolve(cursor.key as string);
+        } else {
+          resolve(null);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   // ==================== WEBSITE ACTIVITY OPERATIONS ====================
 
   async getWebsiteActivity(date: string, domain: string): Promise<WebsiteActivity | null> {

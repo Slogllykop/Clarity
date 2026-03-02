@@ -605,6 +605,12 @@ async function handleMessage(
         break;
       }
 
+      case "GET_EARLIEST_DATE": {
+        const date = await db.getEarliestActivityDate();
+        sendResponse({ date });
+        break;
+      }
+
       case "GET_WEBSITE_LIST": {
         const { date } = message.payload as { date: string };
         const websites = await db.getWebsiteActivitiesForDate(date);

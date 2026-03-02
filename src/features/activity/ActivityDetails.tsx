@@ -20,11 +20,23 @@ interface ActivityDetailsProps {
 
 export function ActivityDetails({ onBack }: ActivityDetailsProps) {
   const [selectedDate, setSelectedDate] = useState(getTodayDate());
+  const [earliestDate, setEarliestDate] = useState<string | null>(null);
   const [weeklyStats, setWeeklyStats] = useState<WeeklyStats[]>([]);
   const [websites, setWebsites] = useState<WebsiteActivity[]>([]);
   const [totalTime, setTotalTime] = useState(0);
   const [yesterdayTotalTime, setYesterdayTotalTime] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const loadEarliestDate = async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "GET_EARLIEST_DATE",
+      });
+      setEarliestDate(response.date || getTodayDate());
+    } catch (error) {
+      console.error("Error loading earliest date:", error);
+    }
+  };
 
   const loadWeeklyStats = async () => {
     try {
@@ -97,6 +109,10 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
   };
 
   useEffect(() => {
+    loadEarliestDate();
+  }, []);
+
+  useEffect(() => {
     loadWeeklyStats();
   }, [selectedDate]);
 
@@ -111,6 +127,11 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
 
     // Don't allow future dates
     if (direction === "next" && newDate > getTodayDate()) {
+      return;
+    }
+
+    // Don't allow dates before earliest installed date
+    if (direction === "prev" && earliestDate && newDate < earliestDate) {
       return;
     }
 
@@ -151,6 +172,7 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
             data={weeklyStats}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
+            earliestDate={earliestDate}
           />
 
           {/* Comparison Text */}
@@ -160,7 +182,8 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
           <div className="flex items-center justify-between mt-6">
             <button
               onClick={() => navigateDay("prev")}
-              className="p-2 text-gray-400 hover:text-white transition-colors"
+              disabled={!!earliestDate && selectedDate <= earliestDate}
+              className="p-2 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed!"
             >
               <IconChevronLeft size={20} />
             </button>
