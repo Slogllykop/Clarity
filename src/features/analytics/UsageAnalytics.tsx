@@ -11,14 +11,14 @@ import {
   YAxis,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Combobox,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 import { db } from "@/db/database";
 import type { DailyActivity } from "@/types";
@@ -160,24 +160,85 @@ function MonthlyView() {
 
   const [selectedMonth, setSelectedMonth] = useState(`${currentYear}-${pad(currentMonth)}`);
   const [activities, setActivities] = useState<DailyActivity[]>([]);
+  const [inputValue, setInputValue] = useState("");
 
   const [year, month] = selectedMonth.split("-").map(Number);
   const daysInMonth = getDaysInMonth(year, month);
 
-  // Generate month options (last 6 months up to current)
+  const [availableMonths, setAvailableMonths] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchAllMonths = async () => {
+      const earliest = await db.getEarliestActivityDate();
+      if (!earliest) return;
+
+      const data = await db.getDailyActivitiesInRange(
+        earliest,
+        `${currentYear}-${pad(currentMonth + 1)}-31`,
+      );
+
+      const months = new Set<string>();
+      data.forEach((a) => {
+        if (a.totalTime > 0) {
+          const [y, mStr] = a.date.split("-");
+          months.add(`${y}-${pad(Number(mStr) - 1)}`);
+        }
+      });
+
+      setAvailableMonths(months);
+
+      // If the currently selected month has no data, select the most recent one with data
+      if (months.size > 0 && !months.has(`${currentYear}-${pad(currentMonth)}`)) {
+        const sorted = Array.from(months).sort((a, b) => b.localeCompare(a));
+        setSelectedMonth(sorted[0]);
+      }
+    };
+    fetchAllMonths();
+  }, [currentYear, currentMonth]);
+
+  // Generate month options (only for months with data)
   const monthOptions = useMemo(() => {
     const options: { value: string; label: string }[] = [];
-    for (let i = 0; i < 6; i++) {
-      const d = new Date(currentYear, currentMonth - i, 1);
-      const y = d.getFullYear();
-      const m = d.getMonth();
+    const sorted = Array.from(availableMonths).sort((a, b) => b.localeCompare(a));
+
+    if (sorted.length === 0) {
+      // Fallback if no data is present yet
       options.push({
-        value: `${y}-${pad(m)}`,
-        label: `${MONTH_NAMES[m]} ${y}`,
+        value: `${currentYear}-${pad(currentMonth)}`,
+        label: `${MONTH_NAMES[currentMonth]} ${currentYear}`,
       });
+      return options;
     }
+
+    sorted.forEach((val) => {
+      const [yStr, mStr] = val.split("-");
+      options.push({
+        value: val,
+        label: `${MONTH_NAMES[Number(mStr)]} ${yStr}`,
+      });
+    });
+
     return options;
-  }, [currentYear, currentMonth]);
+  }, [availableMonths, currentYear, currentMonth]);
+
+  const selectedLabel = useMemo(() => {
+    const opt = monthOptions.find((o) => o.value === selectedMonth);
+    return opt ? opt.label : selectedMonth;
+  }, [monthOptions, selectedMonth]);
+
+  // Keep input in sync with the selected item's label
+  useEffect(() => {
+    setInputValue(selectedLabel);
+  }, [selectedLabel]);
+
+  // Filter dynamically based on search string
+  const filteredOptions = useMemo(() => {
+    // If input matches exactly the selected label, or is empty, show all options
+    if (!inputValue || inputValue === selectedLabel) return monthOptions;
+
+    const lower = inputValue.toLowerCase();
+    return monthOptions.filter((o) => o.label.toLowerCase().includes(lower));
+  }, [monthOptions, inputValue, selectedLabel]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -218,23 +279,49 @@ function MonthlyView() {
   return (
     <div className="space-y-4">
       {/* Month Selector Dropdown */}
-      <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-        <SelectTrigger className="w-full bg-zinc-900 border-zinc-800 text-white">
-          <SelectValue placeholder="Select a month" />
-        </SelectTrigger>
-        <SelectContent className="bg-zinc-900 border-zinc-800">
-          {monthOptions.map((opt) => (
-            <SelectItem
-              key={opt.value}
-              value={opt.value}
-              className="text-white hover:bg-zinc-800 focus:bg-zinc-800 focus:text-white"
-            >
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
+      <Combobox
+        value={selectedLabel}
+        onValueChange={(labelResult) => {
+          if (labelResult) {
+            const opt = monthOptions.find((o) => o.label === labelResult);
+            if (opt) setSelectedMonth(opt.value);
+          }
+        }}
+        inputValue={inputValue}
+        onInputValueChange={(newVal) => {
+          if (/^\d{4}-\d{2}$/.test(newVal)) {
+            const match = monthOptions.find((o) => o.value === newVal);
+            if (match) {
+              setInputValue(match.label);
+              return;
+            }
+          }
+          setInputValue(newVal);
+        }}
+      >
+        <ComboboxInput
+          placeholder="Search month..."
+          showTrigger
+          className="w-full ring-accent bg-zinc-900 border-zinc-800 text-white *:data-[slot=input-group-input]:text-white *:data-[slot=input-group-input]:placeholder:text-gray-400"
+        />
+        <ComboboxContent className="bg-zinc-900 border-zinc-800 w-[--anchor-width]">
+          <ComboboxList className="">
+            {filteredOptions.length === 0 ? (
+              <div className="text-gray-400 p-2 text-sm text-center">No months found</div>
+            ) : (
+              filteredOptions.map((opt) => (
+                <ComboboxItem
+                  key={opt.value}
+                  value={opt.label}
+                  className="text-white data-highlighted:bg-zinc-800 data-highlighted:text-white cursor-pointer"
+                >
+                  {opt.label}
+                </ComboboxItem>
+              ))
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
       {/* Bar Chart */}
       <div className="w-full h-[220px]">
         <ChartContainer config={barChartConfig} className="h-full w-full">
