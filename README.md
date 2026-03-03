@@ -5,14 +5,15 @@ A digital wellbeing Chrome extension that helps you track browsing activity, set
 ## Features
 
 - **Activity Tracking**: Automatically tracks time spent on every website with per-domain breakdowns, visit counts, and favicon caching.
-- **Dashboard**: A donut chart showing today's browsing distribution at a glance, with a live website visit counter.
-- **Usage Analytics**: Analyze long-term browsing trends with monthly, quarterly, and bi-annual charts.
-- **Activity Details**: Interactive weekly bar chart with day-by-day navigation and a ranked list of all visited websites.
-- **Website Timers**: Set daily time limits for specific websites. When exceeded, the site is blocked for the rest of the day (resets at midnight). Includes search and filtering for easy management.
-- **Parental Controls**: Password-protected URL blocking with security question recovery. Uses SHA-256 hashing via the Web Crypto API.
-- **Screen Time Reminders**: Browser notifications at 30 min, 1 hr, and 2 hr thresholds per website.
-- **Data Management**: Backup all your tracking data to a JSON file and restore it anytime.
-- **Blocked Page**: A custom full-page screen shown for timer-exceeded or parentally-blocked websites, with context-aware messaging.
+- **Dashboard**: A comprehensive circular chart displaying daily browsing distribution at a glance, featuring a live website visit counter.
+- **Usage Analytics**: Analyze long-term browsing trends with detailed monthly, quarterly, and bi-annual charts.
+- **Activity Details**: Interactive weekly bar chart with day-by-day navigation, usage comparisons against previous days, and a ranked list of visited websites.
+- **Website Timers**: Set daily time limits for specific websites. Includes integrated search and filtering for efficient management. Websites are blocked for the remainder of the day once limits are exceeded.
+- **Daily Targets**: Set a cumulative daily screen time goal and receive notifications summarizing your progress and adherence to your targets.
+- **Parental Controls**: Password-protected URL blocking with security question recovery. Security is ensured via SHA-256 hashing through the Web Crypto API.
+- **Screen Time Reminders**: Periodic browser notifications delivered at specific thresholds to prevent excessive continuous browsing.
+- **Data Portability**: Securely backup all tracking data to a JSON file and restore it at any time to ensure data continuity.
+- **Blocked Page**: A custom full-screen interface for timer-exceeded or parentally-blocked websites, providing context-aware messaging and encouragement.
 
 ## Tech Stack
 
@@ -20,44 +21,44 @@ A digital wellbeing Chrome extension that helps you track browsing activity, set
 |-------|-----------|
 | Frontend | React 19, TypeScript |
 | Styling | Tailwind CSS v4 |
-| UI Components | Radix UI, Sonner |
+| UI Components | Radix UI, Base UI, Sonner |
 | Visualization | Recharts |
 | Icons | Tabler Icons, Lucide React |
-| Data | IndexedDB (offline-first, no server) |
+| Data | IndexedDB (offline-first architecture) |
 | Build | Vite 7 + [@crxjs/vite-plugin](https://github.com/nicedoc/crxjs) |
 | Linting | Biome.js |
 | Extension | Chrome Manifest V3 |
 | Package Manager | pnpm |
 
-React Compiler is enabled via `babel-plugin-react-compiler` for automatic memoization.
+React Compiler is enabled via `babel-plugin-react-compiler` for automated performance optimization through memoization.
 
 ## Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18+)
+- [Node.js](https://nodejs.org/) (version 18 or higher)
 - [pnpm](https://pnpm.io/)
 
-### Install & Build
+### Installation and Build
 
 ```bash
 # Install dependencies
 pnpm install
 
-# Development (hot reload)
+# Development environment (with hot reload)
 pnpm dev
 
 # Production build
 pnpm build
 ```
 
-### Load into Chrome
+### Loading into Chrome
 
-1. Run `pnpm build` (or use `pnpm dev` for development).
-2. Open `chrome://extensions` in Chrome.
-3. Enable **Developer mode** (top-right toggle).
-4. Click **Load unpacked** and select the `dist/` folder.
-5. Pin the Clarity extension from the toolbar.
+1. Execute `pnpm build` (or use `pnpm dev` for active development).
+2. Open `chrome://extensions` in your browser.
+3. Enable **Developer mode** using the toggle in the top-right corner.
+4. Select **Load unpacked** and choose the `dist/` directory.
+5. Pin the Clarity extension to your toolbar for easy access.
 
 ## Project Structure
 
@@ -66,48 +67,50 @@ pnpm build
 ├── index.html              # Popup entry point
 ├── blocked.html            # Blocked-site page entry point
 ├── rules.json              # Declarative net request rules
-├── vite.config.ts          # Vite + CRXJS + Tailwind config
-├── biome.json              # Linter & formatter config
+├── vite.config.ts          # Vite, CRXJS, and Tailwind configuration
+├── biome.json              # Linter and formatter configuration
 ├── src/
 │   ├── main.tsx           # Extension entry point
-│   ├── App.tsx            # Root component & screen router
+│   ├── App.tsx            # Root component and screen router
 │   ├── blocked.tsx        # Blocked page entry point
-│   ├── index.css          # Global styles & Tailwind directives
+│   ├── index.css          # Global styles and Tailwind directives
 │   ├── background/
-│   │   └── service-worker.ts # Background logic: tracking, timers, blocking
-│   ├── features/          # Feature-based modules
-│   │   ├── activity/      # Activity details & weekly stats
-│   │   ├── analytics/     # Long-term usage trends
-│   │   ├── dashboard/     # Main overview & circular chart
-│   │   ├── parental-controls/ # Password-protected blocking
+│   │   └── service-worker.ts # Background logic: tracking, timers, and blocking
+│   ├── features/          # Feature-specific modules
+│   │   ├── activity/      # Activity details and weekly statistics
+│   │   ├── analytics/     # Long-term usage patterns
+│   │   ├── dashboard/     # Main overview and circular visualization
+│   │   ├── parental-controls/ # Secure URL blocking
 │   │   ├── reminders/     # Screen time notifications
-│   │   └── timers/        # Website time limit management
+│   │   ├── targets/        # Daily screen time goal management
+│   │   └── timers/        # Individual website limit management
 │   ├── components/
-│   │   └── ui/            # Shared UI primitives (Radix, Sonner)
-│   ├── hooks/             # Custom React hooks (navigation, etc.)
-│   ├── db/                # IndexedDB layer & database utilities
-│   ├── lib/               # Utility functions & helpers
-│   ├── types/             # TypeScript definitions
-│   └── constants/         # App-wide constants
+│   │   └── ui/            # Reusable UI primitives (Radix, Sonner)
+│   ├── hooks/             # Custom React hooks
+│   ├── db/                # IndexedDB layer and database utilities
+│   ├── lib/               # Utility functions and helper modules
+│   ├── types/             # TypeScript type definitions
+│   └── constants/         # Application-wide constants
 ```
 
 ## How It Works
 
-The **background service worker** listens to Chrome tab and window events (`tabs.onActivated`, `tabs.onUpdated`, `windows.onFocusChanged`, `idle.onStateChanged`, etc.) to track which website is active. It saves accumulated time to IndexedDB every 10 seconds and updates `declarativeNetRequest` rules to enforce timers and parental blocks.
+The **background service worker** monitors Chrome tab and window events (such as `tabs.onActivated`, `tabs.onUpdated`, and `idle.onStateChanged`) to accurately track active browsing time. Data is persisted to IndexedDB at 10-second intervals. It also dynamically updates `declarativeNetRequest` rules to enforce active timers and parental blocks.
 
-The **popup UI** communicates with the service worker via `chrome.runtime.sendMessage` to fetch stats, manage timers, and toggle settings. All data stays local in IndexedDB, ensuring privacy and offline-first functionality.
+The **popup UI** interacts with the service worker through `chrome.runtime.sendMessage` to retrieve statistics, manage configurations, and toggle features. All data remains local within IndexedDB, prioritizing user privacy and offline functionality.
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Start Vite dev server with HMR |
-| `pnpm build` | Type-check + production build |
-| `pnpm lint` | Run Biome linter |
-| `pnpm lint:fix` | Auto-fix lint issues |
-| `pnpm format` | Format code with Biome |
-| `pnpm release` | Create a new release with standard-version |
+| `pnpm dev` | Starts the Vite development server with HMR |
+| `pnpm build` | Performs type-checking followed by a production build |
+| `pnpm lint` | Executes the Biome linter |
+| `pnpm lint:fix` | Automatically resolves linting issues |
+| `pnpm format` | Formats the codebase using Biome |
+| `pnpm release` | Generates a new release using standard-version |
 
 ## License
 
-[MIT](LICENSE)
+This project is licensed under the [MIT License](LICENSE).
+
