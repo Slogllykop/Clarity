@@ -19,6 +19,13 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 import { db } from "@/db/database";
 import type { DailyActivity } from "@/types";
@@ -369,15 +376,44 @@ function MonthlyView() {
 
 // ─── Quarterly View ──────────────────────────────────────────────────
 
+const QUARTER_DEFINITIONS = [
+  { key: "Q1", label: "Q1 · Jan – Mar", months: [0, 1, 2] },
+  { key: "Q2", label: "Q2 · Apr – Jun", months: [3, 4, 5] },
+  { key: "Q3", label: "Q3 · Jul – Sep", months: [6, 7, 8] },
+  { key: "Q4", label: "Q4 · Oct – Dec", months: [9, 10, 11] },
+] as const;
+
 function QuarterlyView() {
   const now = new Date();
   const currentYear = now.getFullYear();
+  const currentQuarterIndex = Math.floor(now.getMonth() / 3);
+
+  const [selectedQuarter, setSelectedQuarter] = useState<string>(
+    QUARTER_DEFINITIONS[currentQuarterIndex].key,
+  );
+  const [selectedYear, setSelectedYear] = useState(String(currentYear));
   const [activities, setActivities] = useState<DailyActivity[]>([]);
+  const [availableYears, setAvailableYears] = useState<string[]>([String(currentYear)]);
+
+  // Discover available years from database
+  useEffect(() => {
+    const fetchYears = async () => {
+      const earliest = await db.getEarliestActivityDate();
+      if (!earliest) return;
+      const startYear = Number.parseInt(earliest.split("-")[0], 10);
+      const years: string[] = [];
+      for (let y = currentYear; y >= startYear; y--) {
+        years.push(String(y));
+      }
+      setAvailableYears(years);
+    };
+    fetchYears();
+  }, [currentYear]);
 
   useEffect(() => {
     const fetchData = async () => {
-      const startDate = `${currentYear}-01-01`;
-      const endDate = `${currentYear}-12-31`;
+      const startDate = `${selectedYear}-01-01`;
+      const endDate = `${selectedYear}-12-31`;
       try {
         const data = await db.getDailyActivitiesInRange(startDate, endDate);
         setActivities(data);
@@ -386,75 +422,131 @@ function QuarterlyView() {
       }
     };
     fetchData();
-  }, [currentYear]);
+  }, [selectedYear]);
 
-  const quarters = useMemo(() => {
-    return [
-      { label: "Jan – Mar", months: [0, 1, 2] },
-      { label: "Apr – Jun", months: [3, 4, 5] },
-      { label: "Jul – Sep", months: [6, 7, 8] },
-      { label: "Oct – Dec", months: [9, 10, 11] },
-    ].map((q) => {
-      const data = q.months.map((m) => {
-        const monthActivities = activities.filter((a) => {
-          const actMonth = new Date(a.date).getMonth();
-          return actMonth === m;
-        });
-        const totalSeconds = monthActivities.reduce((sum, a) => sum + a.totalTime, 0);
-        return {
-          month: SHORT_MONTHS[m],
-          screenTime: +(totalSeconds / 3600).toFixed(1),
-        };
+  const selectedQ = QUARTER_DEFINITIONS.find((q) => q.key === selectedQuarter)!;
+
+  const chartData = useMemo(() => {
+    return selectedQ.months.map((m) => {
+      const monthActivities = activities.filter((a) => {
+        const actMonth = new Date(a.date).getMonth();
+        return actMonth === m;
       });
-      return { ...q, data };
+      const totalSeconds = monthActivities.reduce((sum, a) => sum + a.totalTime, 0);
+      return {
+        month: SHORT_MONTHS[m],
+        screenTime: +(totalSeconds / 3600).toFixed(1),
+      };
     });
-  }, [activities]);
+  }, [activities, selectedQ]);
 
   return (
-    <div className="space-y-6">
-      {quarters.map((q, i) => (
-        <div key={q.label} className="w-full">
-          <div className="p-4">
-            <div className="w-full h-[200px]">
-              <ChartContainer config={radarChartConfig} className="h-full w-full">
-                <RadarChart data={q.data}>
-                  <PolarGrid stroke="#374151" />
-                  <PolarAngleAxis dataKey="month" tick={{ fill: "#9ca3af", fontSize: 12 }} />
-                  <Radar
-                    dataKey="screenTime"
-                    fill="#10b981"
-                    fillOpacity={0.3}
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{
-                      r: 4,
-                      fill: "#10b981",
-                      fillOpacity: 1,
-                    }}
-                  />
-                </RadarChart>
-              </ChartContainer>
-            </div>
-            <p className="text-center text-base font-medium text-white mt-4">{q.label}</p>
+    <div className="space-y-4">
+      {/* Quarter & Year Selectors */}
+      <div className="flex gap-2">
+        <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
+          <SelectTrigger className="flex-1 bg-zinc-900 border-zinc-800 text-white focus:ring-accent">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-900 border-zinc-800">
+            {QUARTER_DEFINITIONS.map((q) => (
+              <SelectItem
+                key={q.key}
+                value={q.key}
+                className="text-white focus:bg-zinc-800 focus:text-white cursor-pointer"
+              >
+                {q.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <SelectTrigger className="w-[100px] bg-zinc-900 border-zinc-800 text-white focus:ring-accent">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-900 border-zinc-800">
+            {availableYears.map((y) => (
+              <SelectItem
+                key={y}
+                value={y}
+                className="text-white focus:bg-zinc-800 focus:text-white cursor-pointer"
+              >
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Radar Chart for Selected Quarter */}
+      <div className="w-full">
+        <div className="p-4">
+          <div className="w-full h-[250px]">
+            <ChartContainer config={radarChartConfig} className="h-full w-full">
+              <RadarChart data={chartData}>
+                <PolarGrid stroke="#374151" />
+                <PolarAngleAxis dataKey="month" tick={{ fill: "#9ca3af", fontSize: 12 }} />
+                <Radar
+                  dataKey="screenTime"
+                  fill="#10b981"
+                  fillOpacity={0.3}
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  dot={{
+                    r: 4,
+                    fill: "#10b981",
+                    fillOpacity: 1,
+                  }}
+                />
+              </RadarChart>
+            </ChartContainer>
           </div>
-          {i < quarters.length - 1 && <div className="h-px bg-zinc-800 w-full" />}
+          <p className="text-center text-base font-medium text-white mt-4">
+            {selectedQ.label} · {selectedYear}
+          </p>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
 
 // ─── Bi-Annual View ──────────────────────────────────────────────────
 
+const HALF_DEFINITIONS = [
+  { key: "H1", label: "H1 · Jan – Jun", months: [0, 1, 2, 3, 4, 5] },
+  { key: "H2", label: "H2 · Jul – Dec", months: [6, 7, 8, 9, 10, 11] },
+] as const;
+
 function BiAnnualView() {
   const now = new Date();
   const currentYear = now.getFullYear();
+  const currentHalfKey = now.getMonth() < 6 ? "H1" : "H2";
+
+  const [selectedHalf, setSelectedHalf] = useState<string>(currentHalfKey);
+  const [selectedYear, setSelectedYear] = useState(String(currentYear));
   const [activities, setActivities] = useState<DailyActivity[]>([]);
+  const [availableYears, setAvailableYears] = useState<string[]>([String(currentYear)]);
+
+  // Discover available years from database
+  useEffect(() => {
+    const fetchYears = async () => {
+      const earliest = await db.getEarliestActivityDate();
+      if (!earliest) return;
+      const startYear = Number.parseInt(earliest.split("-")[0], 10);
+      const years: string[] = [];
+      for (let y = currentYear; y >= startYear; y--) {
+        years.push(String(y));
+      }
+      setAvailableYears(years);
+    };
+    fetchYears();
+  }, [currentYear]);
 
   useEffect(() => {
     const fetchData = async () => {
-      const startDate = `${currentYear}-01-01`;
-      const endDate = `${currentYear}-12-31`;
+      const startDate = `${selectedYear}-01-01`;
+      const endDate = `${selectedYear}-12-31`;
       try {
         const data = await db.getDailyActivitiesInRange(startDate, endDate);
         setActivities(data);
@@ -463,58 +555,91 @@ function BiAnnualView() {
       }
     };
     fetchData();
-  }, [currentYear]);
+  }, [selectedYear]);
 
-  const halves = useMemo(() => {
-    return [
-      { label: "Jan – Jun", months: [0, 1, 2, 3, 4, 5] },
-      { label: "Jul – Dec", months: [6, 7, 8, 9, 10, 11] },
-    ].map((h) => {
-      const data = h.months.map((m) => {
-        const monthActivities = activities.filter((a) => {
-          const actMonth = new Date(a.date).getMonth();
-          return actMonth === m;
-        });
-        const totalSeconds = monthActivities.reduce((sum, a) => sum + a.totalTime, 0);
-        return {
-          month: SHORT_MONTHS[m],
-          screenTime: +(totalSeconds / 3600).toFixed(1),
-        };
+  const selectedH = HALF_DEFINITIONS.find((h) => h.key === selectedHalf)!;
+
+  const chartData = useMemo(() => {
+    return selectedH.months.map((m) => {
+      const monthActivities = activities.filter((a) => {
+        const actMonth = new Date(a.date).getMonth();
+        return actMonth === m;
       });
-      return { ...h, data };
+      const totalSeconds = monthActivities.reduce((sum, a) => sum + a.totalTime, 0);
+      return {
+        month: SHORT_MONTHS[m],
+        screenTime: +(totalSeconds / 3600).toFixed(1),
+      };
     });
-  }, [activities]);
+  }, [activities, selectedH]);
 
   return (
-    <div className="space-y-6">
-      {halves.map((h, i) => (
-        <div key={h.label} className="w-full">
-          <div className="p-4">
-            <div className="w-full h-[250px]">
-              <ChartContainer config={radarChartConfig} className="h-full w-full">
-                <RadarChart data={h.data}>
-                  <PolarGrid stroke="#374151" />
-                  <PolarAngleAxis dataKey="month" tick={{ fill: "#9ca3af", fontSize: 12 }} />
-                  <Radar
-                    dataKey="screenTime"
-                    fill="#10b981"
-                    fillOpacity={0.3}
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{
-                      r: 4,
-                      fill: "#10b981",
-                      fillOpacity: 1,
-                    }}
-                  />
-                </RadarChart>
-              </ChartContainer>
-            </div>
-            <p className="text-center text-base font-medium text-white mt-4">{h.label}</p>
+    <div className="space-y-4">
+      {/* Half & Year Selectors */}
+      <div className="flex gap-2">
+        <Select value={selectedHalf} onValueChange={setSelectedHalf}>
+          <SelectTrigger className="flex-1 bg-zinc-900 border-zinc-800 text-white focus:ring-accent">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-900 border-zinc-800">
+            {HALF_DEFINITIONS.map((h) => (
+              <SelectItem
+                key={h.key}
+                value={h.key}
+                className="text-white focus:bg-zinc-800 focus:text-white cursor-pointer"
+              >
+                {h.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <SelectTrigger className="w-[100px] bg-zinc-900 border-zinc-800 text-white focus:ring-accent">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-900 border-zinc-800">
+            {availableYears.map((y) => (
+              <SelectItem
+                key={y}
+                value={y}
+                className="text-white focus:bg-zinc-800 focus:text-white cursor-pointer"
+              >
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Radar Chart for Selected Half */}
+      <div className="w-full">
+        <div className="p-4">
+          <div className="w-full h-[250px]">
+            <ChartContainer config={radarChartConfig} className="h-full w-full">
+              <RadarChart data={chartData}>
+                <PolarGrid stroke="#374151" />
+                <PolarAngleAxis dataKey="month" tick={{ fill: "#9ca3af", fontSize: 12 }} />
+                <Radar
+                  dataKey="screenTime"
+                  fill="#10b981"
+                  fillOpacity={0.3}
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  dot={{
+                    r: 4,
+                    fill: "#10b981",
+                    fillOpacity: 1,
+                  }}
+                />
+              </RadarChart>
+            </ChartContainer>
           </div>
-          {i < halves.length - 1 && <div className="h-px bg-zinc-800 w-full" />}
+          <p className="text-center text-base font-medium text-white mt-4">
+            {selectedH.label} · {selectedYear}
+          </p>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
