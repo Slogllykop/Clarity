@@ -32,3 +32,6 @@ webstore/
 
 # Misc 
 CHANGELOG.md
+.agent
+.agents
+skills-lock.json
