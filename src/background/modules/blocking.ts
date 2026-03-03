@@ -1,6 +1,6 @@
 import { db } from "@/db/database";
-import { extractDomain, getTodayDate } from "@/db/utils";
-import { getCachedTimer, getTimeSpentInInterval } from "./timers";
+import { extractDomain } from "@/db/utils";
+import { getCachedTimer, getIntervalTimeSpent } from "./timers";
 
 /**
  * Update declarativeNetRequest rules for blocked websites and timers
@@ -9,8 +9,6 @@ export async function updateBlockingRules() {
   try {
     const blockedWebsites = await db.getAllBlockedWebsites();
     const timers = await db.getAllTimers();
-    const today = getTodayDate();
-    const activities = await db.getWebsiteActivitiesForDate(today);
 
     const rules: chrome.declarativeNetRequest.Rule[] = [];
     let ruleId = 1;
@@ -40,29 +38,26 @@ export async function updateBlockingRules() {
     for (const timer of timers) {
       if (!timer.enabled) continue;
 
-      const activity = activities.find((a) => a.domain === timer.domain);
-      if (activity) {
-        const intervalHours = timer.intervalHours || 24;
-        const effectiveTimeSpent = getTimeSpentInInterval(activity.timeSpent, intervalHours);
+      const intervalHours = timer.intervalHours || 24;
+      const effectiveTimeSpent = getIntervalTimeSpent(timer.domain, intervalHours);
 
-        if (effectiveTimeSpent >= timer.timeLimit) {
-          rules.push({
-            id: ruleId++,
-            priority: 1,
-            action: {
-              type: chrome.declarativeNetRequest.RuleActionType.REDIRECT,
-              redirect: {
-                url: chrome.runtime.getURL(
-                  `blocked.html?reason=timer&domain=${encodeURIComponent(timer.domain)}&limit=${timer.timeLimit}`,
-                ),
-              },
+      if (effectiveTimeSpent >= timer.timeLimit) {
+        rules.push({
+          id: ruleId++,
+          priority: 1,
+          action: {
+            type: chrome.declarativeNetRequest.RuleActionType.REDIRECT,
+            redirect: {
+              url: chrome.runtime.getURL(
+                `blocked.html?reason=timer&domain=${encodeURIComponent(timer.domain)}&limit=${timer.timeLimit}&interval=${intervalHours}`,
+              ),
             },
-            condition: {
-              urlFilter: `*${timer.domain}*`,
-              resourceTypes: [chrome.declarativeNetRequest.ResourceType.MAIN_FRAME],
-            },
-          });
-        }
+          },
+          condition: {
+            urlFilter: `*${timer.domain}*`,
+            resourceTypes: [chrome.declarativeNetRequest.ResourceType.MAIN_FRAME],
+          },
+        });
       }
     }
 
@@ -83,32 +78,36 @@ export async function updateBlockingRules() {
 
 /**
  * Check if timer limit is exceeded for a domain and take action.
- * sessionTabId is passed in to avoid circular import with tracking module.
+ * Immediately redirects the active tab to the block screen when limit is hit.
  */
 export async function checkTimerLimit(
   domain: string,
-  timeSpent: number,
+  _timeSpent: number,
   sessionTabId: number | null,
 ) {
   const timer = getCachedTimer(domain);
   if (!timer || !timer.enabled) return;
 
   const intervalHours = timer.intervalHours || 24;
-  const effectiveTimeSpent = getTimeSpentInInterval(timeSpent, intervalHours);
+  const effectiveTimeSpent = getIntervalTimeSpent(domain, intervalHours);
 
   if (effectiveTimeSpent >= timer.timeLimit) {
     console.log(`Clarity: Timer limit exceeded for ${domain} (interval: ${intervalHours}h)`);
     await updateBlockingRules();
 
-    // Reload tab to trigger block if it's the affected domain
+    // Immediately redirect the tab to the block page (don't reload — avoids
+    // a race where the reload fires before the declarativeNetRequest rule lands)
     if (sessionTabId) {
       try {
         const tab = await chrome.tabs.get(sessionTabId);
         if (tab?.url && extractDomain(tab.url) === domain) {
-          await chrome.tabs.reload(sessionTabId);
+          const blockedUrl = chrome.runtime.getURL(
+            `blocked.html?reason=timer&domain=${encodeURIComponent(domain)}&limit=${timer.timeLimit}&interval=${intervalHours}`,
+          );
+          await chrome.tabs.update(sessionTabId, { url: blockedUrl });
         }
       } catch (error) {
-        console.error("Clarity: Error reloading tab after timer exceeded", error);
+        console.error("Clarity: Error redirecting tab after timer exceeded", error);
       }
     }
   }

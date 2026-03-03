@@ -24,8 +24,9 @@ export function TimerInputRow({
           type="number"
           min="1"
           max="1440"
+          step="1"
           value={timerValue}
-          onChange={(e) => onTimerValueChange(Number(e.target.value))}
+          onChange={(e) => onTimerValueChange(Math.floor(Number(e.target.value)))}
           onKeyPress={(e) => e.key === "Enter" && onSubmit()}
           className="w-16 px-2 py-2 bg-zinc-800 border border-zinc-700 rounded text-sm text-white focus:outline-none focus:border-accent"
           placeholder="15"
@@ -36,8 +37,9 @@ export function TimerInputRow({
           type="number"
           min="1"
           max="24"
+          step="1"
           value={intervalValue}
-          onChange={(e) => onIntervalValueChange(Number(e.target.value))}
+          onChange={(e) => onIntervalValueChange(Math.floor(Number(e.target.value)))}
           className="w-14 px-2 py-2 bg-zinc-800 border border-zinc-700 rounded text-sm text-white focus:outline-none focus:border-accent"
           placeholder="24"
         />

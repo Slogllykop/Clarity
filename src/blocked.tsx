@@ -8,6 +8,7 @@ function BlockedPage() {
   const [reason, setReason] = useState<"timer" | "parental">("timer");
   const [domain, setDomain] = useState("");
   const [limit, setLimit] = useState(0);
+  const [intervalHours, setIntervalHours] = useState(24);
 
   useEffect(() => {
     // Parse URL parameters
@@ -15,10 +16,12 @@ function BlockedPage() {
     const reasonParam = params.get("reason") as "timer" | "parental";
     const domainParam = params.get("domain");
     const limitParam = params.get("limit");
+    const intervalParam = params.get("interval");
 
     if (reasonParam) setReason(reasonParam);
     if (domainParam) setDomain(domainParam);
     if (limitParam) setLimit(Number.parseInt(limitParam, 10));
+    if (intervalParam) setIntervalHours(Number.parseInt(intervalParam, 10));
   }, []);
 
   const goBack = () => {
@@ -40,6 +43,12 @@ function BlockedPage() {
     }
   };
 
+  const isDaily = intervalHours >= 24;
+  const limitLabel = isDaily ? "Daily" : `${intervalHours}h interval`;
+  const resetMessage = isDaily
+    ? "Your timer will reset tomorrow. You can disable the timer in the extension settings."
+    : `Your timer will reset at the next ${intervalHours}-hour interval window. You can disable the timer in the extension settings.`;
+
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center">
@@ -60,10 +69,14 @@ function BlockedPage() {
 
           {reason === "timer" ? (
             <div className="space-y-2">
-              <p className="text-gray-400">You've reached your daily time limit for</p>
+              <p className="text-gray-400">
+                You've reached your {limitLabel.toLowerCase()} time limit for
+              </p>
               <p className="text-xl font-semibold text-white">{domain}</p>
               {limit > 0 && (
-                <p className="text-sm text-gray-500 mt-4">Daily limit: {formatTime(limit)}</p>
+                <p className="text-sm text-gray-500 mt-4">
+                  {limitLabel} limit: {formatTime(limit)}
+                </p>
               )}
             </div>
           ) : (
@@ -81,7 +94,7 @@ function BlockedPage() {
             <div className="flex-1">
               <p className="text-sm text-gray-300">
                 {reason === "timer"
-                  ? "Your timer will reset tomorrow. You can disable the timer in the extension settings."
+                  ? resetMessage
                   : "This website is permanently blocked. Contact your parent or guardian to unblock it."}
               </p>
             </div>

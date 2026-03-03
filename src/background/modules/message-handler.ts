@@ -3,7 +3,7 @@ import { getTodayDate } from "@/db/utils";
 import type { WebsiteTimer } from "@/types";
 import { updateBlockingRules } from "./blocking";
 import { checkAndSendNotifications } from "./notifications";
-import { loadTimerCache } from "./timers";
+import { getAllIntervalTimes, loadTimerCache } from "./timers";
 
 /**
  * Handle messages from popup
@@ -101,7 +101,12 @@ export async function handleMessage(
 
       case "GET_ALL_TIMERS": {
         const timers = await db.getAllTimers();
-        sendResponse({ timers });
+        const intervalTimesMap = getAllIntervalTimes();
+        const intervalTimes: Record<string, number> = {};
+        for (const [domain, time] of intervalTimesMap) {
+          intervalTimes[domain] = time;
+        }
+        sendResponse({ timers, intervalTimes });
         break;
       }
 

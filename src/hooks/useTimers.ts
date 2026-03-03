@@ -8,6 +8,7 @@ import type { WebsiteActivity, WebsiteTimer } from "@/types";
 export function useTimers() {
   const [websites, setWebsites] = useState<WebsiteActivity[]>([]);
   const [timers, setTimers] = useState<Map<string, WebsiteTimer>>(new Map());
+  const [intervalTimes, setIntervalTimes] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
@@ -21,6 +22,7 @@ export function useTimers() {
       ]);
 
       setWebsites(websitesResponse.websites || []);
+      setIntervalTimes(timersResponse.intervalTimes || {});
 
       const timerMap = new Map<string, WebsiteTimer>();
       for (const timer of timersResponse.timers || []) {
@@ -81,6 +83,7 @@ export function useTimers() {
     const timersList: Array<{
       domain: string;
       timeSpent: number;
+      intervalTimeSpent: number;
       faviconUrl?: string;
       visitCount: number;
     }> = [];
@@ -90,17 +93,19 @@ export function useTimers() {
       timersList.push({
         domain,
         timeSpent: website?.timeSpent || 0,
+        intervalTimeSpent: intervalTimes[domain] || 0,
         faviconUrl: website?.faviconUrl || undefined,
         visitCount: website?.visitCount || 0,
       });
     });
 
     return timersList.sort((a, b) => b.timeSpent - a.timeSpent);
-  }, [timers, websites]);
+  }, [timers, websites, intervalTimes]);
 
   return {
     websites,
     timers,
+    intervalTimes,
     loading,
     sortedWebsites,
     allTimersWithActivity,

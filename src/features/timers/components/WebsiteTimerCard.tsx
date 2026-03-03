@@ -7,6 +7,7 @@ import { TimerInputRow } from "./TimerInputRow";
 interface WebsiteTimerCardProps {
   domain: string;
   timeSpent: number;
+  intervalTimeSpent?: number;
   faviconUrl?: string | null;
   timer?: WebsiteTimer;
   isEditing: boolean;
@@ -25,6 +26,7 @@ interface WebsiteTimerCardProps {
 export function WebsiteTimerCard({
   domain,
   timeSpent,
+  intervalTimeSpent,
   faviconUrl,
   timer,
   isEditing,
@@ -43,6 +45,9 @@ export function WebsiteTimerCard({
       ? "Time already exceeded. Website will be blocked immediately."
       : undefined;
 
+  const isExceeded =
+    timer && intervalTimeSpent !== undefined ? intervalTimeSpent >= timer.timeLimit : false;
+
   return (
     <div className="pb-4 last:pb-0 border-b border-zinc-800 last:border-0">
       <div className="flex items-start gap-3">
@@ -56,6 +61,13 @@ export function WebsiteTimerCard({
           <div className="font-medium text-white truncate">{domain}</div>
           <div className="text-sm text-gray-400 mt-1">Today: {formatTime(timeSpent)}</div>
 
+          {/* Interval Time */}
+          {timer && intervalTimeSpent !== undefined && !isEditing ? (
+            <div className="text-sm text-gray-400">
+              Interval: {formatTime(intervalTimeSpent)} / {formatTime(timer.timeLimit)}
+            </div>
+          ) : null}
+
           {/* Timer Status */}
           {timer && !isEditing ? (
             <div className="mt-2 text-xs">
@@ -65,9 +77,7 @@ export function WebsiteTimerCard({
                   ? ` / ${timer.intervalHours}h`
                   : " / day"}
               </span>
-              {timeSpent >= timer.timeLimit ? (
-                <span className="text-red-400 ml-2">• Exceeded</span>
-              ) : null}
+              {isExceeded ? <span className="text-red-400 ml-2">• Exceeded</span> : null}
             </div>
           ) : null}
 

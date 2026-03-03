@@ -6,7 +6,11 @@ import {
   checkAndSendTargetNotification,
   resetNotificationTracker,
 } from "./modules/notifications";
-import { loadTimerCache } from "./modules/timers";
+import {
+  loadIntervalAccumulators,
+  loadTimerCache,
+  resetAllIntervalAccumulators,
+} from "./modules/timers";
 import {
   checkActiveTab,
   getCurrentSession,
@@ -26,6 +30,7 @@ async function initialize() {
   console.log("Clarity: Service worker initialized");
   await db.init();
   await loadTimerCache();
+  await loadIntervalAccumulators();
   await updateBlockingRules();
 
   // Periodic alarms
@@ -122,6 +127,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     console.log("Clarity: Midnight reset triggered");
     await saveCurrentSession();
     await resetNotificationTracker();
+    resetAllIntervalAccumulators();
     await updateBlockingRules();
     await checkAndSendTargetNotification();
   }

@@ -3,6 +3,7 @@ import { extractDomain, getTodayDate, isInternalPage, isNewTabPage } from "@/db/
 import type { WebsiteActivity } from "@/types";
 import { checkTimerLimit, updateBlockingRules } from "./blocking";
 import { resetNotificationTracker } from "./notifications";
+import { addIntervalTime } from "./timers";
 
 // ─── Session State ───────────────────────────────────────────────────
 
@@ -136,6 +137,9 @@ export async function saveCurrentSession() {
       totalTime,
       websiteCount,
     });
+
+    // Add this chunk to the interval accumulator
+    addIntervalTime(domain, timeSpent);
 
     await checkTimerLimit(domain, activity.timeSpent, currentSession.tabId);
 

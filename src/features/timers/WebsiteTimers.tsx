@@ -21,11 +21,13 @@ export function WebsiteTimers({ onBack }: WebsiteTimersProps) {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const handleSetTimer = async (domain: string) => {
-    if (!timerValue || timerValue <= 0) return;
-    if (!intervalValue || intervalValue <= 0 || intervalValue > 24) return;
+    const minutes = Math.floor(timerValue);
+    const interval = Math.floor(intervalValue);
+    if (!minutes || minutes <= 0) return;
+    if (!interval || interval <= 0 || interval > 24) return;
 
-    const timeLimit = timerValue * 60;
-    const success = await setTimer(domain, timeLimit, intervalValue);
+    const timeLimit = minutes * 60;
+    const success = await setTimer(domain, timeLimit, interval);
 
     if (success) {
       setEditingDomain(null);
@@ -82,6 +84,7 @@ export function WebsiteTimers({ onBack }: WebsiteTimersProps) {
                       key={website.domain}
                       domain={website.domain}
                       timeSpent={website.timeSpent}
+                      intervalTimeSpent={website.intervalTimeSpent}
                       faviconUrl={website.faviconUrl}
                       timer={timer}
                       isEditing={editingDomain === website.domain}
