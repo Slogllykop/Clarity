@@ -1,5 +1,7 @@
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { LoadingState } from "@/components/LoadingState";
+import { PageHeader } from "@/components/PageHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 import {
@@ -138,25 +140,12 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
     setSelectedDate(newDate);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-gray-400">Loading...</div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingState />;
 
   return (
     <div className="bg-black text-white" style={{ height: `${EXTENSION_MAX_HEIGHT}px` }}>
       {/* Header */}
-      <div className="bg-black border-b border-zinc-800 p-4">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
-            <IconChevronLeft size={24} />
-          </button>
-          <h2 className="text-xl font-bold">Activity Details</h2>
-        </div>
-      </div>
+      <PageHeader title="Activity Details" onBack={onBack} />
 
       <ScrollArea style={{ height: `${EXTENSION_MAX_HEIGHT - 73}px` }}>
         {/* Stats Section */}

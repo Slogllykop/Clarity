@@ -4,14 +4,14 @@ import {
   IconClock,
   IconDownload,
   IconShield,
+  IconTarget,
   IconUpload,
 } from "@tabler/icons-react";
-import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
-import { db } from "@/db/database";
 import { calculatePercentages, getTodayDate, groupWebsitesByOthers } from "@/db/utils";
+import { useDataTransfer } from "@/hooks/useDataTransfer";
 import type { ScreenName } from "@/hooks/useScreenNavigation";
 import type { DailyActivity, WebsiteActivity } from "@/types";
 import { CircularChart } from "./components/CircularChart";
@@ -25,9 +25,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const [dailyActivity, setDailyActivity] = useState<DailyActivity | null>(null);
   const [websites, setWebsites] = useState<WebsiteActivity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadTodayStats = async () => {
     try {
@@ -72,79 +69,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const totalTime = dailyActivity?.totalTime || 0;
   const websiteCount = dailyActivity?.websiteCount || 0;
 
-  const handleExport = async () => {
-    try {
-      setExporting(true);
-      const exportData = await db.exportAllData();
-
-      // Create JSON blob
-      const jsonStr = JSON.stringify(exportData, null, 2);
-      const blob = new Blob([jsonStr], { type: "application/json" });
-
-      // Create download link
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `clarity-backup-${new Date().toISOString().split("T")[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      console.log("Export successful");
-      toast.success("Data exported successfully!");
-    } catch (error) {
-      console.error("Export failed:", error);
-      toast.error("Failed to export data. Please try again.");
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setImporting(true);
-
-      // Read file
-      const text = await file.text();
-      const importData = JSON.parse(text);
-
-      // Validate structure
-      if (!importData.data || !importData.version) {
-        throw new Error("Invalid backup file format");
-      }
-
-      // Import to database
-      await db.importAllData(importData);
-
-      // Reload stats
-      await loadTodayStats();
-
-      // Notify background worker to reload
-      await chrome.runtime.sendMessage({ type: "RELOAD_DATA" });
-
-      toast.success("Data imported successfully!");
-      console.log("Import successful");
-    } catch (error) {
-      console.error("Import failed:", error);
-      toast.error(
-        `Failed to import data: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    } finally {
-      setImporting(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
+  const { exporting, importing, fileInputRef, handleExport, handleImport, handleImportClick } =
+    useDataTransfer({ onImportSuccess: loadTodayStats });
 
   if (loading) {
     return (
@@ -156,7 +82,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
   return (
     <ScrollArea className="bg-black text-white" style={{ height: `${EXTENSION_MAX_HEIGHT}px` }}>
-      <div className="p-6">
+      <div className="p-6 max-w-[400px]">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold">
@@ -165,7 +91,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </h1>
           <p className="text-gray-400 text-sm mt-1">Digital Wellbeing</p>
         </div>
-
         {/* Circular Chart */}
         <div className="mb-6">
           <CircularChart
@@ -174,7 +99,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             onClick={() => onNavigate("activity-details")}
           />
         </div>
-
         {/* Website Counter */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 rounded-full border border-zinc-800">
@@ -184,59 +108,114 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </span>
           </div>
         </div>
-
-        {/* Features */}
-        <div className="space-y-3">
-          <FeatureCard
-            icon={<IconClock size={20} />}
-            title="Website Timers"
-            description="Set time limits for specific websites"
-            onClick={() => onNavigate("website-timers")}
-          />
-          <FeatureCard
-            icon={<IconShield size={20} />}
-            title="Parental Controls"
-            description="Block websites with password protection"
-            onClick={() => onNavigate("parental-controls")}
-          />
-          <FeatureCard
-            icon={<IconBell size={20} />}
-            title="Screen Time Reminders"
-            description="Get notified about excessive usage"
-            onClick={() => onNavigate("screen-time-reminders")}
-          />
-          <FeatureCard
-            icon={<IconChartBar size={20} />}
-            title="Usage Analytics"
-            description="View detailed usage trends and patterns"
-            onClick={() => onNavigate("usage-analytics")}
-          />
+        {/* Features Section */}
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-px flex-1 bg-linear-to-r from-transparent via-zinc-700/60 to-transparent" />
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+              Features
+            </h2>
+            <div className="h-px flex-1 bg-linear-to-r from-transparent via-zinc-700/60 to-transparent" />
+          </div>
+          <div className="space-y-3">
+            <FeatureCard
+              icon={<IconClock size={20} />}
+              title="Website Timers"
+              description="Set time limits for specific websites"
+              onClick={() => onNavigate("website-timers")}
+            />
+            <FeatureCard
+              icon={<IconShield size={20} />}
+              title="Parental Controls"
+              description="Block websites with password protection"
+              onClick={() => onNavigate("parental-controls")}
+            />
+            <FeatureCard
+              icon={<IconBell size={20} />}
+              title="Screen Time Reminders"
+              description="Get notified about excessive usage"
+              onClick={() => onNavigate("screen-time-reminders")}
+            />
+            <FeatureCard
+              icon={<IconChartBar size={20} />}
+              title="Usage Analytics"
+              description="View detailed usage trends and patterns"
+              onClick={() => onNavigate("usage-analytics")}
+            />
+            <FeatureCard
+              icon={<IconTarget size={20} />}
+              title="Daily Targets"
+              description="Set daily screen time goals with notifications"
+              onClick={() => onNavigate("targets")}
+            />
+          </div>
         </div>
-
-        {/* Import/Export Section */}
-        <div className="mt-6 pt-6 border-t border-zinc-800">
-          <h3 className="text-sm font-semibold text-gray-300 mb-3">Data Management</h3>
+        {/* Data Management Section */}
+        <div className="mt-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-px flex-1 bg-linear-to-r from-transparent via-zinc-700/60 to-transparent" />
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+              Data Management
+            </h2>
+            <div className="h-px flex-1 bg-linear-to-r from-transparent via-zinc-700/60 to-transparent" />
+          </div>
           <div className="grid grid-cols-2 gap-3">
+            {/* Export Button */}
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative p-px rounded-2xl transition-all duration-500 ease-out hover:shadow-[0_8px_30px_rgb(0,0,0,0.5)] outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <IconDownload size={18} className="text-accent" />
-              <span className="text-sm font-medium text-white">
-                {exporting ? "Exporting..." : "Export Data"}
-              </span>
+              {/* Gradient border background - matches FeatureCard */}
+              <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-zinc-800 via-zinc-900/50 to-zinc-800 opacity-100 transition-opacity duration-500 group-hover:from-emerald-500/50 group-hover:via-emerald-900/20 group-hover:to-zinc-800" />
+
+              {/* Card Content */}
+              <div className="relative flex flex-col items-center gap-2 p-4 bg-zinc-950/90 backdrop-blur-xl rounded-[15px] transition-colors duration-500 overflow-hidden">
+                {/* Subtle inner top highlight */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-zinc-700/50 to-transparent opacity-50" />
+
+                {/* Icon Container */}
+                <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 transition-all duration-500 group-hover:border-emerald-500/30 group-hover:bg-emerald-950/30">
+                  <div className="absolute inset-0 rounded-xl bg-emerald-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <IconDownload
+                    size={18}
+                    className="text-zinc-400 group-hover:text-emerald-400 transition-colors duration-300 relative z-10"
+                  />
+                </div>
+
+                <span className="text-sm font-semibold text-zinc-100 group-hover:text-white transition-colors duration-300">
+                  {exporting ? "Exporting..." : "Export"}
+                </span>
+              </div>
             </button>
 
+            {/* Import Button */}
             <button
               onClick={handleImportClick}
               disabled={importing}
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative p-px rounded-2xl transition-all duration-500 ease-out hover:shadow-[0_8px_30px_rgb(0,0,0,0.5)] outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <IconUpload size={18} className="text-accent" />
-              <span className="text-sm font-medium text-white">
-                {importing ? "Importing..." : "Import Data"}
-              </span>
+              {/* Gradient border background - matches FeatureCard */}
+              <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-zinc-800 via-zinc-900/50 to-zinc-800 opacity-100 transition-opacity duration-500 group-hover:from-emerald-500/50 group-hover:via-emerald-900/20 group-hover:to-zinc-800" />
+
+              {/* Card Content */}
+              <div className="relative flex flex-col items-center gap-2 p-4 bg-zinc-950/90 backdrop-blur-xl rounded-[15px] transition-colors duration-500 overflow-hidden">
+                {/* Subtle inner top highlight */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-zinc-700/50 to-transparent opacity-50" />
+
+                {/* Icon Container */}
+                <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 transition-all duration-500 group-hover:border-emerald-500/30 group-hover:bg-emerald-950/30">
+                  <div className="absolute inset-0 rounded-xl bg-emerald-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <IconUpload
+                    size={18}
+                    className="text-zinc-400 group-hover:text-emerald-400 transition-colors duration-300 relative z-10"
+                  />
+                </div>
+
+                <span className="text-sm font-semibold text-zinc-100 group-hover:text-white transition-colors duration-300">
+                  {importing ? "Importing..." : "Import"}
+                </span>
+              </div>
             </button>
           </div>
 

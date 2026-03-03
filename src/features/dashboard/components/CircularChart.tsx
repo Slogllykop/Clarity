@@ -18,7 +18,7 @@ export function CircularChart({ websites, totalTime, onClick }: CircularChartPro
   const hasAnimated = useRef(false);
   const animEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Debounced handler — recharts fires onAnimationEnd per-sector, so we wait
+  // Debounced handler - recharts fires onAnimationEnd per-sector, so we wait
   // for the last sector to finish before updating state
   const handleAnimationEnd = useCallback(() => {
     if (hasAnimated.current) return;

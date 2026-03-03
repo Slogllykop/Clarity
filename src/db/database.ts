@@ -401,17 +401,30 @@ class ClarityDatabase {
     // Clear existing data
     await this.clearAllStores();
 
+    // Backward compatibility: ensure intervalHours has a default for old exports
+    const migratedTimers = (importData.data.websiteTimers || []).map((timer) => ({
+      ...timer,
+      intervalHours: timer.intervalHours ?? 24,
+    }));
+
     // Import all data
     await Promise.all([
       this.importToStore(STORES.DAILY_ACTIVITY, importData.data.dailyActivity || []),
       this.importToStore(STORES.WEBSITE_ACTIVITY, importData.data.websiteActivity || []),
-      this.importToStore(STORES.WEBSITE_TIMERS, importData.data.websiteTimers || []),
+      this.importToStore(STORES.WEBSITE_TIMERS, migratedTimers),
       this.importToStore(STORES.BLOCKED_WEBSITES, importData.data.blockedWebsites || []),
     ]);
 
-    // Import settings
+    // Import settings with backward compatibility for targetSettings
     if (importData.data.settings) {
-      await this.saveSettings(importData.data.settings);
+      const migratedSettings: Settings = {
+        ...importData.data.settings,
+        targetSettings: importData.data.settings.targetSettings ?? {
+          enabled: false,
+          targetHours: 8,
+        },
+      };
+      await this.saveSettings(migratedSettings);
     }
   }
 

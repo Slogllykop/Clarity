@@ -7,7 +7,8 @@ export type ScreenName =
   | "website-timers"
   | "parental-controls"
   | "screen-time-reminders"
-  | "usage-analytics";
+  | "usage-analytics"
+  | "targets";
 
 // Screen constants
 export const SCREENS = {
@@ -17,6 +18,7 @@ export const SCREENS = {
   PARENTAL_CONTROLS: "parental-controls" as const,
   SCREEN_TIME_REMINDERS: "screen-time-reminders" as const,
   USAGE_ANALYTICS: "usage-analytics" as const,
+  TARGETS: "targets" as const,
 } as const;
 
 // Screen configuration type

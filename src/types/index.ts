@@ -20,6 +20,7 @@ export interface WebsiteTimer {
   id?: number;
   domain: string;
   timeLimit: number; // in seconds
+  intervalHours: number; // interval window in hours (default 24 = per day)
   enabled: boolean;
   timeSpentToday?: number; // runtime tracking
 }
@@ -30,6 +31,11 @@ export interface BlockedWebsite {
   dateAdded: string; // ISO format
 }
 
+export interface TargetSettings {
+  enabled: boolean;
+  targetHours: number; // daily target in hours - user should stay below this
+}
+
 export interface Settings {
   id?: number;
   passwordHash?: string;
@@ -37,6 +43,7 @@ export interface Settings {
   securityAnswerHash?: string;
   reminderEnabled: boolean;
   reminderThresholds?: number[]; // in seconds [1800, 3600, 7200] = 30min, 1hr, 2hr
+  targetSettings?: TargetSettings;
 }
 
 // UI types

@@ -1,5 +1,5 @@
-import { IconWorld } from "@tabler/icons-react";
 import { useState } from "react";
+import { FaviconImage } from "@/components/FaviconImage";
 import { formatTime } from "@/db/utils";
 import type { WebsiteActivity } from "@/types";
 
@@ -27,25 +27,7 @@ export function WebsiteList({ websites, showAllThreshold = 10 }: WebsiteListProp
           className="flex items-center gap-3 p-3 bg-zinc-900 rounded-lg border border-zinc-800"
         >
           {/* Favicon */}
-          <div className="w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-full flex-shrink-0">
-            {website.faviconUrl ? (
-              <img
-                src={website.faviconUrl}
-                alt={website.domain}
-                className="w-5 h-5 rounded"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                  if (fallback) fallback.style.display = "block";
-                }}
-              />
-            ) : null}
-            <IconWorld
-              size={16}
-              className="text-gray-400"
-              style={{ display: website.faviconUrl ? "none" : "block" }}
-            />
-          </div>
+          <FaviconImage faviconUrl={website.faviconUrl} domain={website.domain} size="sm" />
 
           {/* Domain */}
           <div className="flex-1 min-w-0">

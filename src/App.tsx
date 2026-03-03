@@ -30,6 +30,11 @@ const UsageAnalytics = lazy(() =>
     default: module.UsageAnalytics,
   })),
 );
+const Targets = lazy(() =>
+  import("@/features/targets/Targets").then((module) => ({
+    default: module.Targets,
+  })),
+);
 
 function App() {
   const { currentScreen, navigate, goToDashboard } = useScreenNavigation();
@@ -48,6 +53,8 @@ function App() {
         return <ScreenTimeReminders onBack={goToDashboard} />;
       case SCREENS.USAGE_ANALYTICS:
         return <UsageAnalytics onBack={goToDashboard} />;
+      case SCREENS.TARGETS:
+        return <Targets onBack={goToDashboard} />;
       default:
         return <Dashboard onNavigate={navigate} />;
     }
