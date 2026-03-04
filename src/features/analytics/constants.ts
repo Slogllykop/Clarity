@@ -33,15 +33,15 @@ export const SHORT_MONTHS = [
 ];
 
 export const QUARTER_DEFINITIONS = [
-  { key: "Q1", label: "Q1 · Jan – Mar", months: [0, 1, 2] },
-  { key: "Q2", label: "Q2 · Apr – Jun", months: [3, 4, 5] },
-  { key: "Q3", label: "Q3 · Jul – Sep", months: [6, 7, 8] },
-  { key: "Q4", label: "Q4 · Oct – Dec", months: [9, 10, 11] },
+  { key: "Q1", label: "Q1 · Jan - Mar", months: [0, 1, 2] },
+  { key: "Q2", label: "Q2 · Apr - Jun", months: [3, 4, 5] },
+  { key: "Q3", label: "Q3 · Jul - Sep", months: [6, 7, 8] },
+  { key: "Q4", label: "Q4 · Oct - Dec", months: [9, 10, 11] },
 ] as const;
 
 export const HALF_DEFINITIONS = [
-  { key: "H1", label: "H1 · Jan – Jun", months: [0, 1, 2, 3, 4, 5] },
-  { key: "H2", label: "H2 · Jul – Dec", months: [6, 7, 8, 9, 10, 11] },
+  { key: "H1", label: "H1 · Jan - Jun", months: [0, 1, 2, 3, 4, 5] },
+  { key: "H2", label: "H2 · Jul - Dec", months: [6, 7, 8, 9, 10, 11] },
 ] as const;
 
 // ─── Chart Configs ───────────────────────────────────────────────────

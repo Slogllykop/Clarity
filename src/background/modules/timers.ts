@@ -69,7 +69,7 @@ export function addIntervalTime(domain: string, seconds: number): void {
   if (existing && existing.windowStart === windowStart) {
     existing.timeSpent += seconds;
   } else {
-    // New window or first entry – reset
+    // New window or first entry - reset
     intervalAccumulators.set(domain, { windowStart, timeSpent: seconds });
   }
 
