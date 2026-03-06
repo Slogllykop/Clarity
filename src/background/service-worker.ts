@@ -110,6 +110,7 @@ chrome.idle.onStateChanged.addListener(async (newState) => {
   } else if (newState === "active") {
     setIdleState(false);
     console.log("Clarity: User is active, resuming tracking");
+    await checkActiveTab();
   }
 });
 

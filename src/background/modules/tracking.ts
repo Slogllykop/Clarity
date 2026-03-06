@@ -49,6 +49,10 @@ export function setIdleState(idle: boolean) {
 export async function saveCurrentSession() {
   if (isUserIdle) {
     console.log("Clarity: User is idle, skipping save");
+    // Advance startTime so idle duration is never counted
+    if (currentSession.startTime) {
+      currentSession.startTime = Date.now();
+    }
     return;
   }
 
