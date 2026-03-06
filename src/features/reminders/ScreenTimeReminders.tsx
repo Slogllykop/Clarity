@@ -79,7 +79,7 @@ export function ScreenTimeReminders({ onBack }: ScreenTimeRemindersProps) {
 
       <ScrollArea style={{ height: `${EXTENSION_MAX_HEIGHT - 73}px` }}>
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 max-w-100">
           {/* Toggle Card */}
           <div className="bg-zinc-900 rounded-lg border border-zinc-800 p-6 mb-6">
             <div className="flex items-start justify-between">

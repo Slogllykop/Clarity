@@ -29,7 +29,7 @@ export function UsageAnalytics({ onBack }: UsageAnalyticsProps) {
       />
 
       <ScrollArea style={{ height: `${EXTENSION_MAX_HEIGHT - 73}px` }}>
-        <div className="p-6">
+        <div className="p-6 max-w-100">
           {/* Period Selector */}
           <div className="flex gap-2 mb-6">
             {PERIOD_OPTIONS.map(({ key, label }) => (

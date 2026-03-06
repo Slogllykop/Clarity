@@ -82,7 +82,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
   return (
     <ScrollArea className="bg-black text-white" style={{ height: `${EXTENSION_MAX_HEIGHT}px` }}>
-      <div className="p-6 max-w-[400px]">
+      <div className="p-6 max-w-100">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold">

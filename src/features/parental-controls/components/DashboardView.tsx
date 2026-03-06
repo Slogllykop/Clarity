@@ -29,7 +29,7 @@ export function DashboardView({
       <PageHeader title="Parental Controls" subtitle="Block websites permanently" onBack={onBack} />
 
       <ScrollArea style={{ height: `${EXTENSION_MAX_HEIGHT - 73}px` }}>
-        <div className="p-6">
+        <div className="p-6 max-w-100">
           {/* Add URL Section */}
           <div className="mb-6">
             <label className="block text-sm font-medium mb-2">Block Website</label>

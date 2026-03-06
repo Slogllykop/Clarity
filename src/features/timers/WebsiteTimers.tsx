@@ -68,7 +68,7 @@ export function WebsiteTimers({ onBack }: WebsiteTimersProps) {
       />
 
       <ScrollArea style={{ height: `${EXTENSION_MAX_HEIGHT - 73}px` }}>
-        <div className="p-6">
+        <div className="p-6 max-w-100">
           {/* Active Timers Section */}
           {allTimersWithActivity.length > 0 && (
             <div className="mb-6">

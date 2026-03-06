@@ -195,7 +195,7 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
         </div>
 
         {/* Website List */}
-        <div className="p-6">
+        <div className="p-6 max-w-100">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Websites Visited</h3>
             <span className="text-sm text-gray-400">
