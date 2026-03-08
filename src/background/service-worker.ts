@@ -98,15 +98,11 @@ chrome.idle.onStateChanged.addListener(async (newState) => {
   console.log(`Clarity: Idle state changed to ${newState}`);
 
   if (newState === "idle" || newState === "locked") {
-    setIdleState(true);
-    console.log("Clarity: User is idle/locked, pausing tracking");
+    // Save active time FIRST (while isUserIdle is still false), then stop
     await saveCurrentSession();
-
-    const session = getCurrentSession();
-    if (session.domain && session.startTime) {
-      // Note: we can't mutate the session directly from here,
-      // but saveCurrentSession already resets startTime
-    }
+    setIdleState(true);
+    await stopTracking();
+    console.log("Clarity: User is idle/locked, tracking stopped");
   } else if (newState === "active") {
     setIdleState(false);
     console.log("Clarity: User is active, resuming tracking");
@@ -117,6 +113,7 @@ chrome.idle.onStateChanged.addListener(async (newState) => {
 // Alarms
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === "saveActivity") {
+    if (!getCurrentSession().domain) return;
     await saveCurrentSession();
   } else if (alarm.name === "updateRules") {
     await updateBlockingRules();

@@ -47,15 +47,6 @@ export function setIdleState(idle: boolean) {
  * Save current session to database
  */
 export async function saveCurrentSession() {
-  if (isUserIdle) {
-    console.log("Clarity: User is idle, skipping save");
-    // Advance startTime so idle duration is never counted
-    if (currentSession.startTime) {
-      currentSession.startTime = Date.now();
-    }
-    return;
-  }
-
   if (!currentSession.domain || !currentSession.startTime) {
     return;
   }
@@ -159,6 +150,11 @@ export async function saveCurrentSession() {
  * Start tracking a new tab
  */
 export async function startTracking(tabId: number, url: string, faviconUrl?: string) {
+  if (isUserIdle) {
+    console.log("Clarity: Ignoring startTracking while user is idle");
+    return;
+  }
+
   await saveCurrentSession();
 
   if (isInternalPage(url) || isNewTabPage(url)) {
