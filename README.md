@@ -4,7 +4,7 @@ A digital wellbeing Chrome extension that helps you track browsing activity, set
 
 ## Features
 
-- **Activity Tracking**: Automatically tracks time spent on every website with per-domain breakdowns, visit counts, and favicon caching.
+- **Activity Tracking**: Automatically tracks active time spent on every website with per-domain breakdowns, visit counts, and favicon caching. Intelligently pauses tracking after 15 minutes of inactivity or system lock to ensure absolute time accuracy.
 - **Dashboard**: A comprehensive circular chart displaying daily browsing distribution at a glance, featuring a live website visit counter.
 - **Usage Analytics**: Analyze long-term browsing trends with detailed monthly, quarterly, and bi-annual charts.
 - **Activity Details**: Interactive weekly bar chart with day-by-day navigation, usage comparisons against previous days, and a ranked list of visited websites.
@@ -95,7 +95,7 @@ pnpm build
 
 ## How It Works
 
-The **background service worker** monitors Chrome tab and window events (such as `tabs.onActivated`, `tabs.onUpdated`, and `idle.onStateChanged`) to accurately track active browsing time. Data is persisted to IndexedDB at 10-second intervals. It also dynamically updates `declarativeNetRequest` rules to enforce active timers and parental blocks.
+The **background service worker** monitors Chrome tab and window events (such as `tabs.onActivated`, `tabs.onUpdated`, and `idle.onStateChanged`) to accurately track active browsing time. It intelligently suspends tracking when the system is inactive for 15 minutes or locked. Data is persisted to IndexedDB at 10-second intervals. It also dynamically updates `declarativeNetRequest` rules to enforce active timers and parental blocks.
 
 The **popup UI** interacts with the service worker through `chrome.runtime.sendMessage` to retrieve statistics, manage configurations, and toggle features. All data remains local within IndexedDB, prioritizing user privacy and offline functionality.
 
