@@ -26,6 +26,12 @@ let currentSession: SessionState = {
 };
 
 let isUserIdle = false;
+let isWindowFocused = false; // Default to false; verified on init
+
+// Maximum seconds to accept per save chunk. The save alarm fires every
+// 10 seconds, so anything significantly above that indicates the session
+// ran while the window was unfocused or the service worker was suspended.
+const MAX_SESSION_CHUNK_SECONDS = 30;
 
 /**
  * Get current session state (for use by other modules)
@@ -41,13 +47,34 @@ export function setIdleState(idle: boolean) {
   isUserIdle = idle;
 }
 
+/**
+ * Set window focus state (called from service-worker.ts)
+ */
+export function setWindowFocused(focused: boolean) {
+  isWindowFocused = focused;
+}
+
+/**
+ * Get window focus state
+ */
+export function getWindowFocused(): boolean {
+  return isWindowFocused;
+}
+
 // ─── Session Management ──────────────────────────────────────────────
 
 /**
- * Save current session to database
+ * Save current session to database.
+ * Skipped when the browser window is not focused to prevent
+ * background profiles from accumulating phantom screen time.
  */
 export async function saveCurrentSession() {
   if (!currentSession.domain || !currentSession.startTime) {
+    return;
+  }
+
+  // Don't save time while the window is unfocused or the user is idle
+  if (!isWindowFocused || isUserIdle) {
     return;
   }
 
@@ -104,8 +131,12 @@ export async function saveCurrentSession() {
     await updateBlockingRules();
   }
 
-  const timeSpent = Math.floor((Date.now() - currentSession.startTime) / 1000);
+  let timeSpent = Math.floor((Date.now() - currentSession.startTime) / 1000);
   if (timeSpent < 1) return;
+
+  // Cap the chunk to guard against runaway accumulation (e.g. after
+  // a service worker suspension/resume while the window was unfocused).
+  timeSpent = Math.min(timeSpent, MAX_SESSION_CHUNK_SECONDS);
 
   const domain = currentSession.domain;
 
@@ -155,6 +186,11 @@ export async function startTracking(tabId: number, url: string, faviconUrl?: str
     return;
   }
 
+  if (!isWindowFocused) {
+    console.log("Clarity: Ignoring startTracking while window is unfocused");
+    return;
+  }
+
   await saveCurrentSession();
 
   if (isInternalPage(url) || isNewTabPage(url)) {
@@ -193,10 +229,23 @@ export async function stopTracking() {
 }
 
 /**
- * Check and start tracking active tab
+ * Check and start tracking active tab.
+ * Validates that the browser window is actually focused before tracking
+ * to prevent background profiles from accumulating phantom screen time.
  */
 export async function checkActiveTab() {
   try {
+    // Verify that this profile's window is actually OS-focused
+    const lastFocused = await chrome.windows.getLastFocused({ populate: false });
+    if (!lastFocused?.focused) {
+      isWindowFocused = false;
+      await stopTracking();
+      console.log("Clarity: Window not focused, skipping checkActiveTab");
+      return;
+    }
+
+    isWindowFocused = true;
+
     const [tab] = await chrome.tabs.query({
       active: true,
       currentWindow: true,

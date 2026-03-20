@@ -14,8 +14,10 @@ import {
 import {
   checkActiveTab,
   getCurrentSession,
+  getWindowFocused,
   saveCurrentSession,
   setIdleState,
+  setWindowFocused,
   startTracking,
   stopTracking,
 } from "./modules/tracking";
@@ -87,8 +89,10 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 // Window focus changed
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
   if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    setWindowFocused(false);
     await stopTracking();
   } else {
+    setWindowFocused(true);
     await checkActiveTab();
   }
 });
@@ -114,6 +118,25 @@ chrome.idle.onStateChanged.addListener(async (newState) => {
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === "saveActivity") {
     if (!getCurrentSession().domain) return;
+
+    // Re-validate window focus before every periodic save.
+    // This catches edge cases where onFocusChanged was missed
+    // (e.g. service worker restart while the profile is in the background).
+    try {
+      const lastFocused = await chrome.windows.getLastFocused({ populate: false });
+      if (!lastFocused?.focused) {
+        if (getWindowFocused()) {
+          setWindowFocused(false);
+          await stopTracking();
+          console.log("Clarity: Window lost focus (detected on alarm), stopped tracking");
+        }
+        return;
+      }
+    } catch {
+      // If we can't check focus, skip saving to be safe
+      return;
+    }
+
     await saveCurrentSession();
   } else if (alarm.name === "updateRules") {
     await updateBlockingRules();
