@@ -26,12 +26,12 @@ let currentSession: SessionState = {
 };
 
 let isUserIdle = false;
-let isWindowFocused = false; // Default to false; verified on init
+let isWindowFocused = false;
 
 // Maximum seconds to accept per save chunk. The save alarm fires every
 // 10 seconds, so anything significantly above that indicates the session
 // ran while the window was unfocused or the service worker was suspended.
-const MAX_SESSION_CHUNK_SECONDS = 30;
+const MAX_SESSION_CHUNK_SECONDS = 120;
 
 /**
  * Get current session state (for use by other modules)
@@ -229,23 +229,21 @@ export async function stopTracking() {
 }
 
 /**
- * Check and start tracking active tab.
- * Validates that the browser window is actually focused before tracking
- * to prevent background profiles from accumulating phantom screen time.
+ * Check and start tracking the currently-active tab.
+ *
+ * This function trusts the `isWindowFocused` flag that is maintained by
+ * `setWindowFocused()` (driven by `chrome.windows.onFocusChanged`).
+ * It does NOT independently query `chrome.windows.getLastFocused()`,
+ * because that async call can return stale data and create a race
+ * condition that prevents tracking from resuming after window re-focus.
  */
 export async function checkActiveTab() {
+  if (!isWindowFocused) {
+    console.log("Clarity: Window not focused, skipping checkActiveTab");
+    return;
+  }
+
   try {
-    // Verify that this profile's window is actually OS-focused
-    const lastFocused = await chrome.windows.getLastFocused({ populate: false });
-    if (!lastFocused?.focused) {
-      isWindowFocused = false;
-      await stopTracking();
-      console.log("Clarity: Window not focused, skipping checkActiveTab");
-      return;
-    }
-
-    isWindowFocused = true;
-
     const [tab] = await chrome.tabs.query({
       active: true,
       currentWindow: true,

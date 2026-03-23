@@ -14,7 +14,6 @@ import {
 import {
   checkActiveTab,
   getCurrentSession,
-  getWindowFocused,
   saveCurrentSession,
   setIdleState,
   setWindowFocused,
@@ -45,7 +44,17 @@ async function initialize() {
   });
 
   chrome.idle.setDetectionInterval(IDLE_THRESHOLD);
-  checkActiveTab();
+
+  // Determine initial window focus state before starting to track.
+  // On subsequent focus changes, onFocusChanged drives the flag.
+  try {
+    const lastFocused = await chrome.windows.getLastFocused({ populate: false });
+    setWindowFocused(!!lastFocused?.focused);
+  } catch {
+    setWindowFocused(false);
+  }
+
+  await checkActiveTab();
 
   // Handle missed midnight (laptop off at midnight)
   await checkAndSendTargetNotification();
@@ -118,25 +127,8 @@ chrome.idle.onStateChanged.addListener(async (newState) => {
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === "saveActivity") {
     if (!getCurrentSession().domain) return;
-
-    // Re-validate window focus before every periodic save.
-    // This catches edge cases where onFocusChanged was missed
-    // (e.g. service worker restart while the profile is in the background).
-    try {
-      const lastFocused = await chrome.windows.getLastFocused({ populate: false });
-      if (!lastFocused?.focused) {
-        if (getWindowFocused()) {
-          setWindowFocused(false);
-          await stopTracking();
-          console.log("Clarity: Window lost focus (detected on alarm), stopped tracking");
-        }
-        return;
-      }
-    } catch {
-      // If we can't check focus, skip saving to be safe
-      return;
-    }
-
+    // saveCurrentSession() already guards on isWindowFocused & isUserIdle,
+    // so no redundant async focus re-validation is needed here.
     await saveCurrentSession();
   } else if (alarm.name === "updateRules") {
     await updateBlockingRules();

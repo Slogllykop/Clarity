@@ -1,0 +1,114 @@
+diff --git a/src/background/modules/tracking.ts b/src/background/modules/tracking.ts
+index a18a609..6c1335a 100644
+--- a/src/background/modules/tracking.ts
++++ b/src/background/modules/tracking.ts
+@@ -26,12 +26,12 @@ let currentSession: SessionState = {
+ };
+ 
+ let isUserIdle = false;
+-let isWindowFocused = false; // Default to false; verified on init
++let isWindowFocused = false;
+ 
+ // Maximum seconds to accept per save chunk. The save alarm fires every
+ // 10 seconds, so anything significantly above that indicates the session
+ // ran while the window was unfocused or the service worker was suspended.
+-const MAX_SESSION_CHUNK_SECONDS = 30;
++const MAX_SESSION_CHUNK_SECONDS = 120;
+ 
+ /**
+  * Get current session state (for use by other modules)
+@@ -229,23 +229,21 @@ export async function stopTracking() {
+ }
+ 
+ /**
+- * Check and start tracking active tab.
+- * Validates that the browser window is actually focused before tracking
+- * to prevent background profiles from accumulating phantom screen time.
++ * Check and start tracking the currently-active tab.
++ *
++ * This function trusts the `isWindowFocused` flag that is maintained by
++ * `setWindowFocused()` (driven by `chrome.windows.onFocusChanged`).
++ * It does NOT independently query `chrome.windows.getLastFocused()`,
++ * because that async call can return stale data and create a race
++ * condition that prevents tracking from resuming after window re-focus.
+  */
+ export async function checkActiveTab() {
+-  try {
+-    // Verify that this profile's window is actually OS-focused
+-    const lastFocused = await chrome.windows.getLastFocused({ populate: false });
+-    if (!lastFocused?.focused) {
+-      isWindowFocused = false;
+-      await stopTracking();
+-      console.log("Clarity: Window not focused, skipping checkActiveTab");
+-      return;
+-    }
+-
+-    isWindowFocused = true;
++  if (!isWindowFocused) {
++    console.log("Clarity: Window not focused, skipping checkActiveTab");
++    return;
++  }
+ 
++  try {
+     const [tab] = await chrome.tabs.query({
+       active: true,
+       currentWindow: true,
+diff --git a/src/background/service-worker.ts b/src/background/service-worker.ts
+index 1853be9..7593a05 100644
+--- a/src/background/service-worker.ts
++++ b/src/background/service-worker.ts
+@@ -14,7 +14,6 @@ import {
+ import {
+   checkActiveTab,
+   getCurrentSession,
+-  getWindowFocused,
+   saveCurrentSession,
+   setIdleState,
+   setWindowFocused,
+@@ -45,7 +44,17 @@ async function initialize() {
+   });
+ 
+   chrome.idle.setDetectionInterval(IDLE_THRESHOLD);
+-  checkActiveTab();
++
++  // Determine initial window focus state before starting to track.
++  // On subsequent focus changes, onFocusChanged drives the flag.
++  try {
++    const lastFocused = await chrome.windows.getLastFocused({ populate: false });
++    setWindowFocused(!!lastFocused?.focused);
++  } catch {
++    setWindowFocused(false);
++  }
++
++  await checkActiveTab();
+ 
+   // Handle missed midnight (laptop off at midnight)
+   await checkAndSendTargetNotification();
+@@ -118,25 +127,8 @@ chrome.idle.onStateChanged.addListener(async (newState) => {
+ chrome.alarms.onAlarm.addListener(async (alarm) => {
+   if (alarm.name === "saveActivity") {
+     if (!getCurrentSession().domain) return;
+-
+-    // Re-validate window focus before every periodic save.
+-    // This catches edge cases where onFocusChanged was missed
+-    // (e.g. service worker restart while the profile is in the background).
+-    try {
+-      const lastFocused = await chrome.windows.getLastFocused({ populate: false });
+-      if (!lastFocused?.focused) {
+-        if (getWindowFocused()) {
+-          setWindowFocused(false);
+-          await stopTracking();
+-          console.log("Clarity: Window lost focus (detected on alarm), stopped tracking");
+-        }
+-        return;
+-      }
+-    } catch {
+-      // If we can't check focus, skip saving to be safe
+-      return;
+-    }
+-
++    // saveCurrentSession() already guards on isWindowFocused & isUserIdle,
++    // so no redundant async focus re-validation is needed here.
+     await saveCurrentSession();
+   } else if (alarm.name === "updateRules") {
+     await updateBlockingRules();
