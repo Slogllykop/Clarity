@@ -12,6 +12,7 @@ import {
   getTodayDate,
   getWeekRange,
 } from "@/db/utils";
+import { log } from "@/lib/logger";
 import type { WebsiteActivity, WeeklyStats } from "@/types";
 import { WebsiteList } from "./components/WebsiteList";
 import { WeeklyBarChart } from "./components/WeeklyBarChart";
@@ -36,7 +37,7 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
       });
       setEarliestDate(response.date || getTodayDate());
     } catch (error) {
-      console.error("Error loading earliest date:", error);
+      log.error("Error loading earliest date", error);
     }
   };
 
@@ -51,7 +52,7 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
       const stats = generateWeeklyStatsArray(weekRange, response.activities || []);
       setWeeklyStats(stats);
     } catch (error) {
-      console.error("Error loading weekly stats:", error);
+      log.error("Error loading weekly stats", error);
     } finally {
       setLoading(false);
     }
@@ -81,7 +82,7 @@ export function ActivityDetails({ onBack }: ActivityDetailsProps) {
         yesterdayList.reduce((sum: number, w: WebsiteActivity) => sum + w.timeSpent, 0),
       );
     } catch (error) {
-      console.error("Error loading websites:", error);
+      log.error("Error loading websites", error);
     }
   };
 

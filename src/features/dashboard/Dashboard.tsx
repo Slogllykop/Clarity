@@ -13,6 +13,7 @@ import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
 import { calculatePercentages, getTodayDate, groupWebsitesByOthers } from "@/db/utils";
 import { useDataTransfer } from "@/hooks/useDataTransfer";
 import type { ScreenName } from "@/hooks/useScreenNavigation";
+import { log } from "@/lib/logger";
 import type { DailyActivity, WebsiteActivity } from "@/types";
 import { CircularChart } from "./components/CircularChart";
 import { FeatureCard } from "./components/FeatureCard";
@@ -51,7 +52,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
       setWebsites(filteredWebsites);
     } catch (error) {
-      console.error("Error loading stats:", error);
+      log.error("Error loading stats", error);
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,6 @@
 import { db } from "@/db/database";
 import { getTodayDate } from "@/db/utils";
+import { log } from "@/lib/logger";
 import type { WebsiteTimer } from "@/types";
 import { updateBlockingRules } from "./blocking";
 import { checkAndSendNotifications } from "./notifications";
@@ -120,7 +121,7 @@ export async function handleMessage(
         sendResponse({ error: "Unknown message type" });
     }
   } catch (error) {
-    console.error("Clarity: Error handling message", error);
+    log.error("Error handling message", error);
     sendResponse({ error: String(error) });
   }
 }

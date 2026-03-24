@@ -1,4 +1,5 @@
 import { db } from "@/db/database";
+import { log } from "@/lib/logger";
 import type { WebsiteTimer } from "@/types";
 
 // ─── Timer Cache ─────────────────────────────────────────────────────
@@ -126,7 +127,7 @@ async function persistIntervalAccumulators(): Promise<void> {
     }
     await chrome.storage.local.set({ [INTERVAL_STORAGE_KEY]: serialized });
   } catch (error) {
-    console.error("Clarity: Error persisting interval accumulators", error);
+    log.error("Error persisting interval accumulators", error);
   }
 }
 
@@ -156,6 +157,6 @@ export async function loadIntervalAccumulators(): Promise<void> {
       }
     }
   } catch (error) {
-    console.error("Clarity: Error loading interval accumulators", error);
+    log.error("Error loading interval accumulators", error);
   }
 }

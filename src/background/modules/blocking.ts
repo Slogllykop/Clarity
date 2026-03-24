@@ -1,5 +1,6 @@
 import { db } from "@/db/database";
 import { extractDomain } from "@/db/utils";
+import { log } from "@/lib/logger";
 import { getCachedTimer, getIntervalTimeSpent } from "./timers";
 
 /**
@@ -70,9 +71,9 @@ export async function updateBlockingRules() {
       addRules: rules,
     });
 
-    console.log(`Clarity: Updated ${rules.length} blocking rules`);
+    log.info(`Updated ${rules.length} blocking rules`);
   } catch (error) {
-    console.error("Clarity: Error updating blocking rules", error);
+    log.error("Error updating blocking rules", error);
   }
 }
 
@@ -92,10 +93,10 @@ export async function checkTimerLimit(
   const effectiveTimeSpent = getIntervalTimeSpent(domain, intervalHours);
 
   if (effectiveTimeSpent >= timer.timeLimit) {
-    console.log(`Clarity: Timer limit exceeded for ${domain} (interval: ${intervalHours}h)`);
+    log.warn(`Timer limit exceeded for ${domain} (interval: ${intervalHours}h)`);
     await updateBlockingRules();
 
-    // Immediately redirect the tab to the block page (don't reload — avoids
+    // Immediately redirect the tab to the block page (don't reload - avoids
     // a race where the reload fires before the declarativeNetRequest rule lands)
     if (sessionTabId) {
       try {
@@ -107,7 +108,7 @@ export async function checkTimerLimit(
           await chrome.tabs.update(sessionTabId, { url: blockedUrl });
         }
       } catch (error) {
-        console.error("Clarity: Error redirecting tab after timer exceeded", error);
+        log.error("Error redirecting tab after timer exceeded", error);
       }
     }
   }

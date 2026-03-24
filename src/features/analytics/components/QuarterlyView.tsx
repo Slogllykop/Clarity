@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { db } from "@/db/database";
+import { log } from "@/lib/logger";
 import type { DailyActivity } from "@/types";
 import { QUARTER_DEFINITIONS, radarChartConfig, SHORT_MONTHS } from "../constants";
 
@@ -46,7 +47,7 @@ export function QuarterlyView() {
         const data = await db.getDailyActivitiesInRange(startDate, endDate);
         setActivities(data);
       } catch (error) {
-        console.error("Error fetching quarterly data:", error);
+        log.error("Error fetching quarterly data", error);
       }
     };
     fetchData();

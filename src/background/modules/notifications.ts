@@ -1,5 +1,6 @@
 import { db } from "@/db/database";
 import { getTodayDate } from "@/db/utils";
+import { log } from "@/lib/logger";
 
 // ─── Notification State ──────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ export async function checkAndSendNotifications() {
       await saveNotificationState(notificationState);
     }
   } catch (error) {
-    console.error("Clarity: Error checking notifications", error);
+    log.error("Error checking notifications", error);
   }
 }
 
@@ -96,9 +97,9 @@ async function sendScreenTimeNotification(domain: string, timeSpent: number, thr
       requireInteraction: false,
     });
 
-    console.log(`Clarity: Sent notification for ${domain} at ${timeString}`);
+    log.info(`Sent notification for ${domain} at ${timeString}`);
   } catch (error) {
-    console.error("Clarity: Error sending notification", error);
+    log.error("Error sending notification", error);
   }
 }
 
@@ -109,7 +110,7 @@ export async function resetNotificationTracker() {
   const today = getTodayDate();
   const newState: NotificationState = { date: today, sent: {} };
   await saveNotificationState(newState);
-  console.log("Clarity: Reset notification tracker for new day");
+  log.info("Reset notification tracker for new day");
 }
 
 // ─── Target Notifications ────────────────────────────────────────────
@@ -167,8 +168,8 @@ export async function checkAndSendTargetNotification() {
       [TARGET_NOTIFICATION_KEY]: { lastSentDate: today },
     });
 
-    console.log(`Clarity: Sent target notification for ${yesterdayDate}: ${message}`);
+    log.info(`Sent target notification for ${yesterdayDate}: ${message}`);
   } catch (error) {
-    console.error("Clarity: Error checking target notification", error);
+    log.error("Error checking target notification", error);
   }
 }

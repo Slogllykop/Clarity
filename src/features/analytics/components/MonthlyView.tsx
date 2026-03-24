@@ -9,6 +9,7 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { db } from "@/db/database";
+import { log } from "@/lib/logger";
 import type { DailyActivity } from "@/types";
 import { barChartConfig, MONTH_NAMES, SHORT_MONTHS } from "../constants";
 import { formatHours, getDaysInMonth, pad } from "../helpers";
@@ -100,7 +101,7 @@ export function MonthlyView() {
         const data = await db.getDailyActivitiesInRange(startDate, endDate);
         setActivities(data);
       } catch (error) {
-        console.error("Error fetching monthly data:", error);
+        log.error("Error fetching monthly data", error);
       }
     };
     fetchData();

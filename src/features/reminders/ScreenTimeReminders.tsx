@@ -5,6 +5,7 @@ import { LoadingState } from "@/components/LoadingState";
 import { PageHeader } from "@/components/PageHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
+import { log } from "@/lib/logger";
 import type { Settings } from "@/types";
 
 interface ScreenTimeRemindersProps {
@@ -21,7 +22,7 @@ export function ScreenTimeReminders({ onBack }: ScreenTimeRemindersProps) {
       const settings: Settings = response.settings || { reminderEnabled: false };
       setEnabled(settings.reminderEnabled);
     } catch (error) {
-      console.error("Error loading settings:", error);
+      log.error("Error loading settings", error);
     } finally {
       setLoading(false);
     }
@@ -62,7 +63,7 @@ export function ScreenTimeReminders({ onBack }: ScreenTimeRemindersProps) {
         }
       }
     } catch (error) {
-      console.error("Error toggling reminders:", error);
+      log.error("Error toggling reminders", error);
     }
   };
 

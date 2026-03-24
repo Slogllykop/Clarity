@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getTodayDate } from "@/db/utils";
+import { log } from "@/lib/logger";
 import type { WebsiteActivity, WebsiteTimer } from "@/types";
 
 /**
@@ -30,7 +31,7 @@ export function useTimers() {
       }
       setTimers(timerMap);
     } catch (error) {
-      console.error("Error loading timer data:", error);
+      log.error("Error loading timer data", error);
     } finally {
       setLoading(false);
     }
@@ -57,7 +58,7 @@ export function useTimers() {
       }
       return false;
     } catch (error) {
-      console.error("Error setting timer:", error);
+      log.error("Error setting timer", error);
       return false;
     }
   };
@@ -70,7 +71,7 @@ export function useTimers() {
       });
       await loadData();
     } catch (error) {
-      console.error("Error deleting timer:", error);
+      log.error("Error deleting timer", error);
     }
   };
 

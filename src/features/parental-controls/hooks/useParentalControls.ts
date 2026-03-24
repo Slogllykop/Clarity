@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { hashPassword, verifyPassword } from "@/db/utils";
+import { log } from "@/lib/logger";
 import type { BlockedWebsite, Settings } from "@/types";
 
 export type ParentalView = "auth" | "setup" | "dashboard" | "reset";
@@ -36,7 +37,7 @@ export function useParentalControls() {
         setView("setup");
       }
     } catch (err) {
-      console.error("Error loading settings:", err);
+      log.error("Error loading settings", err);
     }
   };
 
@@ -47,7 +48,7 @@ export function useParentalControls() {
       });
       setBlockedWebsites(response.blocked || []);
     } catch (err) {
-      console.error("Error loading blocked websites:", err);
+      log.error("Error loading blocked websites", err);
     }
   };
 
@@ -94,7 +95,7 @@ export function useParentalControls() {
       setSecurityAnswer("");
     } catch (err) {
       setError("Failed to set up parental controls");
-      console.error(err);
+      log.error("Error setting up parental controls", err);
     }
   };
 
@@ -113,7 +114,7 @@ export function useParentalControls() {
       }
     } catch (err) {
       setError("Authentication failed");
-      console.error(err);
+      log.error("Authentication failed", err);
     }
   };
 
@@ -134,7 +135,7 @@ export function useParentalControls() {
       }
     } catch (err) {
       setError("Reset failed");
-      console.error(err);
+      log.error("Reset failed", err);
     }
   };
 
@@ -154,7 +155,7 @@ export function useParentalControls() {
       setNewUrl("");
     } catch (err) {
       setError("Failed to block URL. It may already be blocked.");
-      console.error(err);
+      log.error("Failed to block URL", err);
     }
   };
 
@@ -167,7 +168,7 @@ export function useParentalControls() {
       await loadBlockedWebsites();
     } catch (err) {
       setError("Failed to remove blocked URL");
-      console.error(err);
+      log.error("Failed to remove blocked URL", err);
     }
   };
 

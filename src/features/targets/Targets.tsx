@@ -5,6 +5,7 @@ import { LoadingState } from "@/components/LoadingState";
 import { PageHeader } from "@/components/PageHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EXTENSION_MAX_HEIGHT } from "@/constants/layout";
+import { log } from "@/lib/logger";
 import type { Settings, TargetSettings } from "@/types";
 
 interface TargetsProps {
@@ -26,7 +27,7 @@ export function Targets({ onBack }: TargetsProps) {
         setTargetHours(target.targetHours || 8);
       }
     } catch (error) {
-      console.error("Error loading target settings:", error);
+      log.error("Error loading target settings", error);
     } finally {
       setLoading(false);
     }
@@ -74,7 +75,7 @@ export function Targets({ onBack }: TargetsProps) {
         toast.success("Daily target enabled! You'll be notified each day.");
       }
     } catch (error) {
-      console.error("Error toggling target:", error);
+      log.error("Error toggling target", error);
     }
   };
 
@@ -94,7 +95,7 @@ export function Targets({ onBack }: TargetsProps) {
 
       toast.success(`Target set to ${targetHours} hours per day`);
     } catch (error) {
-      console.error("Error saving target:", error);
+      log.error("Error saving target", error);
       toast.error("Failed to save target");
     }
   };

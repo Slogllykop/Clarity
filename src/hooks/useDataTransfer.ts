@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { db } from "@/db/database";
+import { log } from "@/lib/logger";
 
 interface UseDataTransferOptions {
   /** Called after a successful import so the consumer can refresh its data. */
@@ -37,10 +38,10 @@ export function useDataTransfer({ onImportSuccess }: UseDataTransferOptions = {}
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      console.log("Export successful");
+      log.info("Export successful");
       toast.success("Data exported successfully!");
     } catch (error) {
-      console.error("Export failed:", error);
+      log.error("Export failed", error);
       toast.error("Failed to export data. Please try again.");
     } finally {
       setExporting(false);
@@ -73,9 +74,9 @@ export function useDataTransfer({ onImportSuccess }: UseDataTransferOptions = {}
       await chrome.runtime.sendMessage({ type: "RELOAD_DATA" });
 
       toast.success("Data imported successfully!");
-      console.log("Import successful");
+      log.info("Import successful");
     } catch (error) {
-      console.error("Import failed:", error);
+      log.error("Import failed", error);
       toast.error(
         `Failed to import data: ${error instanceof Error ? error.message : "Unknown error"}`,
       );

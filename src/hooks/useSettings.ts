@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { log } from "@/lib/logger";
 import type { Settings } from "@/types";
 
 /**
@@ -13,7 +14,7 @@ export function useSettings() {
       const response = await chrome.runtime.sendMessage({ type: "GET_SETTINGS" });
       setSettings(response.settings || null);
     } catch (error) {
-      console.error("Error loading settings:", error);
+      log.error("Error loading settings", error);
     } finally {
       setLoading(false);
     }
@@ -28,7 +29,7 @@ export function useSettings() {
       // Reload to get the merged state
       await loadSettings();
     } catch (error) {
-      console.error("Error updating settings:", error);
+      log.error("Error updating settings", error);
       throw error;
     }
   };

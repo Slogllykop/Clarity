@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { db } from "@/db/database";
+import { log } from "@/lib/logger";
 import type { DailyActivity } from "@/types";
 import { HALF_DEFINITIONS, radarChartConfig, SHORT_MONTHS } from "../constants";
 
@@ -44,7 +45,7 @@ export function BiAnnualView() {
         const data = await db.getDailyActivitiesInRange(startDate, endDate);
         setActivities(data);
       } catch (error) {
-        console.error("Error fetching bi-annual data:", error);
+        log.error("Error fetching bi-annual data", error);
       }
     };
     fetchData();

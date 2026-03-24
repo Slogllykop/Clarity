@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { log } from "@/lib/logger";
 import type { BlockedWebsite } from "@/types";
 
 /**
@@ -13,7 +14,7 @@ export function useBlockedWebsites() {
       const response = await chrome.runtime.sendMessage({ type: "GET_BLOCKED_WEBSITES" });
       setBlockedWebsites(response.blocked || []);
     } catch (error) {
-      console.error("Error loading blocked websites:", error);
+      log.error("Error loading blocked websites", error);
     } finally {
       setLoading(false);
     }
