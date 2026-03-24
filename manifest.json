@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Clarity: Master Your Time",
-  "version": "5.0.7",
+  "version": "5.1.0",
   "description": "Take control of your focus. Track browsing habits, set smart time limits, and block distractions to reclaim your productivity.",
   "icons": {
     "16": "icons/icon-16.png",
