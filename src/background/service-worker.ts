@@ -1,4 +1,5 @@
 import { db } from "@/db/database";
+import { log } from "@/lib/logger";
 import { updateBlockingRules } from "./modules/blocking";
 import { handleMessage } from "./modules/message-handler";
 import {
@@ -13,6 +14,7 @@ import {
 } from "./modules/timers";
 import {
   checkActiveTab,
+  checkFocusState,
   getCurrentSession,
   saveCurrentSession,
   setIdleState,
@@ -28,7 +30,7 @@ const IDLE_THRESHOLD = 15 * 60; // 15 minutes in seconds
 // ─── Initialisation ──────────────────────────────────────────────────
 
 async function initialize() {
-  console.log("Clarity: Service worker initialized");
+  log.info("Service worker initialized");
   await db.init();
   await loadTimerCache();
   await loadIntervalAccumulators();
@@ -36,6 +38,7 @@ async function initialize() {
 
   // Periodic alarms
   chrome.alarms.create("saveActivity", { periodInMinutes: 1 / 6 });
+  chrome.alarms.create("focusHeartbeat", { periodInMinutes: 1 / 6 });
   chrome.alarms.create("updateRules", { periodInMinutes: 1 });
   chrome.alarms.create("checkNotifications", { periodInMinutes: 0.5 });
   chrome.alarms.create("midnightReset", {
@@ -48,7 +51,9 @@ async function initialize() {
   // Determine initial window focus state before starting to track.
   // On subsequent focus changes, onFocusChanged drives the flag.
   try {
-    const lastFocused = await chrome.windows.getLastFocused({ populate: false });
+    const lastFocused = await chrome.windows.getLastFocused({
+      populate: false,
+    });
     setWindowFocused(!!lastFocused?.focused);
   } catch {
     setWindowFocused(false);
@@ -77,7 +82,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
       await startTracking(activeInfo.tabId, tab.url, tab.favIconUrl);
     }
   } catch (error) {
-    console.error("Clarity: Error on tab activated", error);
+    log.error("Error on tab activated", error);
   }
 });
 
@@ -98,9 +103,11 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 // Window focus changed
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
   if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    log.info("Window lost focus (onFocusChanged)");
     setWindowFocused(false);
     await stopTracking();
   } else {
+    log.info(`Window ${windowId} gained focus (onFocusChanged)`);
     setWindowFocused(true);
     await checkActiveTab();
   }
@@ -108,17 +115,17 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
 
 // Idle state
 chrome.idle.onStateChanged.addListener(async (newState) => {
-  console.log(`Clarity: Idle state changed to ${newState}`);
+  log.info(`Idle state changed to ${newState}`);
 
   if (newState === "idle" || newState === "locked") {
     // Save active time FIRST (while isUserIdle is still false), then stop
     await saveCurrentSession();
     setIdleState(true);
     await stopTracking();
-    console.log("Clarity: User is idle/locked, tracking stopped");
+    log.info("User is idle/locked, tracking stopped");
   } else if (newState === "active") {
     setIdleState(false);
-    console.log("Clarity: User is active, resuming tracking");
+    log.info("User is active, resuming tracking");
     await checkActiveTab();
   }
 });
@@ -130,6 +137,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     // saveCurrentSession() already guards on isWindowFocused & isUserIdle,
     // so no redundant async focus re-validation is needed here.
     await saveCurrentSession();
+  } else if (alarm.name === "focusHeartbeat") {
+    // Periodic focus-state verification to catch missed onFocusChanged
+    await checkFocusState();
   } else if (alarm.name === "updateRules") {
     await updateBlockingRules();
   } else if (alarm.name === "checkNotifications") {
@@ -137,7 +147,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   } else if (alarm.name === "resetNotifications") {
     await resetNotificationTracker();
   } else if (alarm.name === "midnightReset") {
-    console.log("Clarity: Midnight reset triggered");
+    log.info("Midnight reset triggered");
     await saveCurrentSession();
     await resetNotificationTracker();
     resetAllIntervalAccumulators();

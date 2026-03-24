@@ -1,5 +1,6 @@
 import { db } from "@/db/database";
 import { extractDomain, getTodayDate, isInternalPage, isNewTabPage } from "@/db/utils";
+import { log } from "@/lib/logger";
 import type { WebsiteActivity } from "@/types";
 import { checkTimerLimit, updateBlockingRules } from "./blocking";
 import { resetNotificationTracker } from "./notifications";
@@ -16,6 +17,17 @@ interface SessionState {
   sessionDate: string | null;
 }
 
+/**
+ * Lightweight snapshot of the session we were tracking before the window
+ * lost focus. When the window regains focus we attempt to resume tracking
+ * the same tab so there is no gap.
+ */
+interface PendingSession {
+  tabId: number;
+  domain: string;
+  faviconUrl: string | null;
+}
+
 let currentSession: SessionState = {
   tabId: null,
   domain: null,
@@ -24,6 +36,8 @@ let currentSession: SessionState = {
   isNewVisit: false,
   sessionDate: null,
 };
+
+let pendingSession: PendingSession | null = null;
 
 let isUserIdle = false;
 let isWindowFocused = false;
@@ -82,9 +96,7 @@ export async function saveCurrentSession() {
 
   // Handle day change
   if (currentSession.sessionDate && currentSession.sessionDate !== today) {
-    console.log(
-      `Clarity: Day changed from ${currentSession.sessionDate} to ${today}, resetting session`,
-    );
+    log.info(`Day changed from ${currentSession.sessionDate} to ${today}, resetting session`);
 
     const todayMidnight = new Date(today);
     todayMidnight.setHours(0, 0, 0, 0);
@@ -115,11 +127,11 @@ export async function saveCurrentSession() {
           websiteCount,
         });
 
-        console.log(
-          `Clarity: Saved ${timeUntilMidnight}s for ${domain} to previous day ${currentSession.sessionDate}`,
+        log.info(
+          `Saved ${timeUntilMidnight}s for ${domain} to previous day ${currentSession.sessionDate}`,
         );
       } catch (error) {
-        console.error("Clarity: Error saving previous day session", error);
+        log.error("Error saving previous day session", error);
       }
     }
 
@@ -169,9 +181,9 @@ export async function saveCurrentSession() {
 
     await checkTimerLimit(domain, activity.timeSpent, currentSession.tabId);
 
-    console.log(`Clarity: Saved ${timeSpent}s for ${domain}`);
+    log.info(`Saved ${timeSpent}s for ${domain}`);
   } catch (error) {
-    console.error("Clarity: Error saving session", error);
+    log.error("Error saving session", error);
   }
 
   currentSession.startTime = Date.now();
@@ -182,12 +194,12 @@ export async function saveCurrentSession() {
  */
 export async function startTracking(tabId: number, url: string, faviconUrl?: string) {
   if (isUserIdle) {
-    console.log("Clarity: Ignoring startTracking while user is idle");
+    log.debug("Ignoring startTracking while user is idle");
     return;
   }
 
   if (!isWindowFocused) {
-    console.log("Clarity: Ignoring startTracking while window is unfocused");
+    log.debug("Ignoring startTracking while window is unfocused");
     return;
   }
 
@@ -200,6 +212,9 @@ export async function startTracking(tabId: number, url: string, faviconUrl?: str
 
   const domain = extractDomain(url);
 
+  // Clear any pending session since we're now actively tracking
+  pendingSession = null;
+
   currentSession = {
     tabId,
     domain,
@@ -209,13 +224,26 @@ export async function startTracking(tabId: number, url: string, faviconUrl?: str
     sessionDate: getTodayDate(),
   };
 
-  console.log(`Clarity: Started tracking ${domain}`);
+  log.info(`Started tracking ${domain}`);
 }
 
 /**
- * Stop tracking current session
+ * Stop tracking current session.
+ *
+ * When called due to window unfocus, stashes the session info in
+ * `pendingSession` so that `checkActiveTab` can seamlessly resume
+ * tracking when the window regains focus.
  */
 export async function stopTracking() {
+  // Stash session context before clearing so we can resume later
+  if (currentSession.tabId && currentSession.domain) {
+    pendingSession = {
+      tabId: currentSession.tabId,
+      domain: currentSession.domain,
+      faviconUrl: currentSession.faviconUrl,
+    };
+  }
+
   await saveCurrentSession();
   currentSession = {
     tabId: null,
@@ -225,21 +253,21 @@ export async function stopTracking() {
     isNewVisit: false,
     sessionDate: null,
   };
-  console.log("Clarity: Stopped tracking");
+  log.info("Stopped tracking");
 }
 
 /**
  * Check and start tracking the currently-active tab.
  *
  * This function trusts the `isWindowFocused` flag that is maintained by
- * `setWindowFocused()` (driven by `chrome.windows.onFocusChanged`).
- * It does NOT independently query `chrome.windows.getLastFocused()`,
- * because that async call can return stale data and create a race
- * condition that prevents tracking from resuming after window re-focus.
+ * `setWindowFocused()` (driven by `chrome.windows.onFocusChanged` and
+ * the focus heartbeat alarm). When a `pendingSession` exists from a
+ * previous unfocus event, it attempts to resume tracking the same tab
+ * for a seamless experience.
  */
 export async function checkActiveTab() {
   if (!isWindowFocused) {
-    console.log("Clarity: Window not focused, skipping checkActiveTab");
+    log.debug("Window not focused, skipping checkActiveTab");
     return;
   }
 
@@ -248,12 +276,68 @@ export async function checkActiveTab() {
       active: true,
       currentWindow: true,
     });
+
     if (tab?.id && tab.url) {
       await startTracking(tab.id, tab.url, tab.favIconUrl);
+    } else if (pendingSession) {
+      // Tab query returned nothing useful but we have a pending session;
+      // try to recover by looking up the pending tab directly.
+      try {
+        const pendingTab = await chrome.tabs.get(pendingSession.tabId);
+        if (pendingTab?.url) {
+          await startTracking(pendingSession.tabId, pendingTab.url, pendingTab.favIconUrl);
+        } else {
+          pendingSession = null;
+          await stopTracking();
+        }
+      } catch {
+        // Pending tab no longer exists
+        pendingSession = null;
+        await stopTracking();
+      }
     } else {
       await stopTracking();
     }
   } catch (error) {
-    console.error("Clarity: Error checking active tab", error);
+    log.error("Error checking active tab", error);
+  }
+}
+
+// ─── Focus Heartbeat ─────────────────────────────────────────────────
+
+/**
+ * Heartbeat called by a periodic alarm to catch focus/unfocus transitions
+ * that `chrome.windows.onFocusChanged` misses (a known Chromium bug when
+ * alt-tabbing to non-Chrome applications or other browser profiles).
+ *
+ * Uses `chrome.windows.getLastFocused()` which reliably reports
+ * `focused: false` even when Chrome has a window but another OS-level
+ * app has focus.
+ */
+export async function checkFocusState() {
+  try {
+    const lastFocused = await chrome.windows.getLastFocused({
+      populate: false,
+    });
+    const actuallyFocused = !!lastFocused?.focused;
+
+    if (isWindowFocused && !actuallyFocused) {
+      // The window lost focus but onFocusChanged didn't fire
+      log.warn("Heartbeat detected window unfocus - stopping tracking");
+      setWindowFocused(false);
+      await stopTracking();
+    } else if (!isWindowFocused && actuallyFocused) {
+      // The window regained focus but onFocusChanged didn't fire
+      log.warn("Heartbeat detected window re-focus - resuming tracking");
+      setWindowFocused(true);
+      await checkActiveTab();
+    }
+  } catch {
+    // getLastFocused can fail if there are no windows at all
+    if (isWindowFocused) {
+      log.warn("Heartbeat: no windows found - marking as unfocused");
+      setWindowFocused(false);
+      await stopTracking();
+    }
   }
 }
